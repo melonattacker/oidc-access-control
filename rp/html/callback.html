@@ -13,8 +13,27 @@
             if (idToken) {
                 // Display the ID token (for demonstration purposes)
                 document.getElementById('idToken').textContent = idToken;
+
+                // Send the ID token to the server for validation and processing
+                fetch('/callback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idToken: idToken })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Handle response data
+                    console.log(data);
+                    document.getElementById('response').textContent = 'Login successful! User ID: ' + data.userId;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('response').textContent = 'Error processing ID token.';
+                });
             } else {
-                document.getElementById('error').textContent = 'ID token not found in URL fragment.';
+                document.getElementById('response').textContent = 'ID token not found in URL fragment.';
             }
         };
     </script>
@@ -22,6 +41,6 @@
 <body>
     <h1>Callback - ID Token Processing</h1>
     <p>ID Token: <span id="idToken"></span></p>
-    <p id="error"></p>
+    <p id="response"></p>
 </body>
 </html>

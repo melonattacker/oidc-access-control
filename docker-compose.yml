@@ -4,11 +4,11 @@ services:
   rp:
     build: ./rp
     ports:
-      - "3000:3000"
+      - "4444:4444"
     depends_on:
       - idp
       
   idp:
     build: ./idp
     ports:
-      - "3001:3001"
+      - "4445:4445"
