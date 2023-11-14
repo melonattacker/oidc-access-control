@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Callback - ID Token Processing</title>
+    <script type="text/javascript">
+        window.onload = function() {
+            // Parse the URL fragment to get the ID token
+            const hash = window.location.hash.substr(1);
+            const params = new URLSearchParams(hash);
+            const idToken = params.get('id_token');
+            const state = params.get('state');
+
+            if (idToken) {
+                // Display the ID token (for demonstration purposes)
+                document.getElementById('idToken').textContent = idToken;
+            } else {
+                document.getElementById('error').textContent = 'ID token not found in URL fragment.';
+            }
+        };
+    </script>
+</head>
+<body>
+    <h1>Callback - ID Token Processing</h1>
+    <p>ID Token: <span id="idToken"></span></p>
+    <p id="error"></p>
+</body>
+</html>
