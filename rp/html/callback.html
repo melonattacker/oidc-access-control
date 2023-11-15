@@ -4,17 +4,14 @@
     <title>Callback - ID Token Processing</title>
     <script type="text/javascript">
         window.onload = function() {
-            // Parse the URL fragment to get the ID token
             const hash = window.location.hash.substr(1);
             const params = new URLSearchParams(hash);
             const idToken = params.get('id_token');
             const state = params.get('state');
 
             if (idToken) {
-                // Display the ID token (for demonstration purposes)
                 document.getElementById('idToken').textContent = idToken;
 
-                // Send the ID token to the server for validation and processing
                 fetch('/callback', {
                     method: 'POST',
                     headers: {
@@ -24,9 +21,12 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Handle response data
                     console.log(data);
-                    document.getElementById('response').textContent = 'Login successful! User ID: ' + data.userId;
+                    if (data.verificationUrl) {
+                        document.getElementById('response').innerHTML = 'Please verify your email: <a href="' + data.verificationUrl + '">' + data.verificationUrl + '</a>';
+                    } else {
+                        document.getElementById('response').textContent = 'Login successful! User ID: ' + data.userId;
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);

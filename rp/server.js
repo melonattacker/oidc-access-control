@@ -29,6 +29,7 @@ const client = jwksClient({
 });
 
 const users = {};
+const verificationTokens = {};
 
 function getKey(header, callback){
   client.getSigningKey(header.kid, function(err, key) {
@@ -73,19 +74,46 @@ app.post('/callback', async (req, res) => {
       });
     });
 
-    // Check if user exists or create a new one
-    const userId = decoded.sub; // Assuming sub claim is the user identifier
+    const userId = decoded.sub; // sub claim is the user identifier
     if (!users[userId]) {
-      users[userId] = { userId, data: decoded }; // Simple user registration
-    }
+      // generate verification URL
+      const verificationToken = crypto.randomBytes(16).toString('hex');
+      const verificationUrl = `http://localhost:${port}/verify-email?token=${verificationToken}`;
 
-    // Set session information
-    req.session.userId = userId;
+      // save verification token
+      verificationTokens[verificationToken] = { userId, data: decoded };
 
-    res.json({ status: 'Logged in', userId: userId });
+      // return verification URL
+      return res.json({ status: 'Verification email sent', verificationUrl: verificationUrl });
+    } else {
+      // Set session information
+      req.session.userId = userId;
+      res.json({ status: 'Logged in', userId: userId });
+    } 
   } catch (error) {
     res.status(400).send(`Invalid ID token: ${error.message}`);
   }
+});
+
+// email verification endpoint
+app.get('/verify-email', (req, res) => {
+  const { token } = req.query;
+
+  const verificationToken = verificationTokens[token];
+  if (!verificationToken) {
+    return res.status(400).send('Invalid or expired verification token.');
+  }
+
+  // Verification successful
+  delete verificationTokens[token]; // Remove the token after verification
+
+  const userId = verificationToken.userId;
+  users[userId] = { userId, data: verificationToken.data };
+  console.log("users", users);
+
+  // Set session information
+  req.session.userId = userId;
+  res.json({ status: 'User registration successful', userId: verificationToken.userId });
 });
 
 app.listen(port, () => {

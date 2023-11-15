@@ -5,6 +5,8 @@ services:
     build: ./rp
     ports:
       - "4444:4444"
+    env_file:
+      - .env
     depends_on:
       - idp
       
