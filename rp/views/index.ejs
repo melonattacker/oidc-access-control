@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+</head>
+<body>
+    <h1>Welcome to the Demo !!</h1>
+    <% if (!userId) { %>
+        <p>Please <a href="/login">log in</a>.</p>
+    <% } else { %>
+        <p>Welcome, <%= userId %> !!</p>
+    <% } %>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Verification</title>
+</head>
+<body>
+    <h1>Email Verification</h1>
+    <% if (!verified) { %>
+        <p>Invalid or expired verification token.</p>
+    <% } else { %>
+        <p>Verification successful. Please go to <a href="/">home</a> page.</p>
+    <% } %>
+</body>
+</html>

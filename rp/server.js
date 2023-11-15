@@ -4,10 +4,10 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
-const axios = require('axios');
 const jwksClient = require('jwks-rsa');
 
 const app = express();
+app.set('view engine', 'ejs');
 const port = 4444;
 
 // middleware
@@ -38,6 +38,11 @@ function getKey(header, callback){
   });
 }
 
+// index page
+app.get('/', (req, res) => {
+  res.render('index', { userId: req.session.userId });
+});
+
 // send authentication request to IdP
 app.get('/login', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
@@ -55,7 +60,7 @@ app.get('/login', (req, res) => {
 
 // callback endpoint
 app.get('/callback', async (req, res) => {
-  res.sendFile(path.join(__dirname, './html/callback.html'));
+  res.render('callback');
 });
 
 // process ID token
@@ -101,7 +106,7 @@ app.get('/verify-email', (req, res) => {
 
   const verificationToken = verificationTokens[token];
   if (!verificationToken) {
-    return res.status(400).send('Invalid or expired verification token.');
+    return res.render('verify-email',  { verified: false });
   }
 
   // Verification successful
@@ -109,11 +114,15 @@ app.get('/verify-email', (req, res) => {
 
   const userId = verificationToken.userId;
   users[userId] = { userId, data: verificationToken.data };
-  console.log("users", users);
 
   // Set session information
   req.session.userId = userId;
-  res.json({ status: 'User registration successful', userId: verificationToken.userId });
+  res.render('verify-email', { verified: true });
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/');
 });
 
 app.listen(port, () => {

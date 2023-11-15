@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Callback - ID Token and Email Verification Processing</title>
+    <script type="text/javascript">
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const verificationToken = urlParams.get('token');
+            if (verificationToken) {
+                // Handle email verification
+                verifyEmail(verificationToken);
+            } else {
+                // Handle ID token processing
+                processIdToken();
+            }
+        };
+
+        function processIdToken() {
+            const hash = window.location.hash.substr(1);
+            const params = new URLSearchParams(hash);
+            const idToken = params.get('id_token');
+            const state = params.get('state');
+
+            if (idToken) {
+                document.getElementById('idToken').textContent = idToken;
+
+                fetch('/callback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idToken: idToken })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    handleResponse(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('response').textContent = 'Error processing ID token.';
+                });
+            } else {
+                document.getElementById('response').textContent = 'ID token not found in URL fragment.';
+            }
+        }
+
+        function verifyEmail(token) {
+            fetch(`/verify-email?token=${token}`)
+            .then(response => response.json())
+            .then(data => {
+                handleResponse(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('response').textContent = 'Error verifying email.';
+            });
+        }
+
+        function handleResponse(data) {
+            console.log(data);
+            if (data.verificationUrl) {
+                document.getElementById('response').innerHTML = 'Please verify your email: <a href="' + data.verificationUrl + '">' + data.verificationUrl + '</a>';
+            } else {
+                document.getElementById('response').innerHTML = 'Login successful. Please go to <a href="/">home</a> page';
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Callback - ID Token and Email Verification Processing</h1>
+    <p>ID Token: <span id="idToken"></span></p>
+    <p id="response"></p>
+</body>
+</html>
