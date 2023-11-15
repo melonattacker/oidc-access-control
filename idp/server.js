@@ -11,6 +11,8 @@ const port = 4445;
 
 const secret = crypto.randomBytes(32).toString('hex');
 
+const REDIRECT_URI = process.env.REDIRECT_URI;
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -23,7 +25,7 @@ app.use(session({
 const clients = {
   'client': {
     secret: 'secret',
-    redirectUris: ['http://localhost:4444/callback'],
+    redirectUris: [REDIRECT_URI],
   },
 };
 
@@ -32,8 +34,8 @@ const codes = {};
 
 // add guest user
 async function addInitialUser() {
-  const userId = 'guest';
-  const password = 'guest';
+  const userId = 'hoge';
+  const password = 'hoge';
   const hashedPassword = await bcrypt.hash(password, 10);
   users[userId] = { userId, password: hashedPassword };
 }
@@ -169,6 +171,7 @@ app.post('/consent', (req, res) => {
         iat: now, // The issued at time of the token (now)
         auth_time: now, // The time the user was authenticated
         nonce: authDetails.nonce, // The nonce value received from the authentication request
+        name: req.session.userId, // The user's name
       };
 
       const idToken = jwt.sign(payload, privateKey, { algorithm: 'RS256', keyid: kid });
@@ -225,6 +228,7 @@ app.post('/token', (req, res) => {
     iat: now, // The issued at time of the token (now)
     auth_time: now, // The time the user was authenticated
     nonce: authDetails.nonce, // The nonce value received from the authentication request
+    name: req.session.userId, // The user's name
   };
 
   const idToken = jwt.sign(payload, privateKey, { algorithm: 'RS256', keyid: kid });

@@ -1,74 +1,267 @@
 <!DOCTYPE html>
-<html>
 <head>
-    <title>Callback - ID Token and Email Verification Processing</title>
-    <script type="text/javascript">
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const verificationToken = urlParams.get('token');
-            if (verificationToken) {
-                // Handle email verification
-                verifyEmail(verificationToken);
-            } else {
-                // Handle ID token processing
-                processIdToken();
-            }
-        };
-
-        function processIdToken() {
-            const hash = window.location.hash.substr(1);
-            const params = new URLSearchParams(hash);
-            const idToken = params.get('id_token');
-            const state = params.get('state');
-
-            if (idToken) {
-                document.getElementById('idToken').textContent = idToken;
-
-                fetch('/callback', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ idToken: idToken })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    handleResponse(data);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('response').textContent = 'Error processing ID token.';
-                });
-            } else {
-                document.getElementById('response').textContent = 'ID token not found in URL fragment.';
-            }
-        }
-
-        function verifyEmail(token) {
-            fetch(`/verify-email?token=${token}`)
-            .then(response => response.json())
-            .then(data => {
-                handleResponse(data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('response').textContent = 'Error verifying email.';
-            });
-        }
-
-        function handleResponse(data) {
-            console.log(data);
-            if (data.verificationUrl) {
-                document.getElementById('response').innerHTML = 'Please verify your email: <a href="' + data.verificationUrl + '">' + data.verificationUrl + '</a>';
-            } else {
-                document.getElementById('response').innerHTML = 'Login successful. Please go to <a href="/">home</a> page';
-            }
-        }
-    </script>
+  <title>Submitting Callback</title>
 </head>
 <body>
-    <h1>Callback - ID Token and Email Verification Processing</h1>
-    <p>ID Token: <span id="idToken"></span></p>
-    <p id="response"></p>
+  <p id="content">Submitting Callback...</p>
+  <button id="registerButton">Register</button>
+  <button id="loginButton">Login</button>
+  <button id="normalRegisterButton">Normal Register</button>
+  <button id="normalLoginButton">Normal Login</button>
+
+  <script>
+    /**
+     * Sends a POST request with payload. Throws when the response is not 200.
+     * @param path The endpoint path.
+     * @param payload The payload JSON object.
+     * @returns 
+     */
+    async function _fetch(path, payload = '') {
+      const headers = {
+        'X-Requested-With': 'XMLHttpRequest',
+      };
+      if (payload && !(payload instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+        payload = JSON.stringify(payload);
+      }
+      const res = await fetch(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: headers,
+        body: payload,
+      });
+      if (res.status === 200) {
+        // Server authentication succeeded
+        return res.json();
+      } else {
+        // Server authentication failed
+        const result = await res.json();
+        throw new Error(result.error);
+      }
+    };
+
+    /**
+     * Encode given buffer or decode given string with Base64URL.
+     */
+    const base64url = {
+      encode: function(buffer) {
+        const base64 = window.btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        return base64.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+      },
+      decode: function(base64url) {
+        const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+        console.log(base64);
+        const binStr = window.atob(base64);
+        const bin = new Uint8Array(binStr.length);
+        for (let i = 0; i < binStr.length; i++) {
+          bin[i] = binStr.charCodeAt(i);
+        }
+        return bin.buffer;
+      }
+    };
+
+    function getIdToken() {
+      const hash = window.location.hash.substr(1); 
+      const params = new URLSearchParams(hash);
+      const idToken = params.get('id_token');
+      return idToken;
+    }
+
+    async function registerCredential(idToken) {
+      const options = await _fetch('/auth/registerRequest', {
+        idToken: idToken
+      });
+      console.log("options:", options);
+
+      // Base64URL decode some values
+      options.user.id = base64url.decode(options.user.id);
+      options.challenge = base64url.decode(options.challenge);
+      if (options.excludeCredentials) {
+        for (let cred of options.excludeCredentials) {
+          cred.id = base64url.decode(cred.id);
+        }
+      }
+      console.log("options:", options);
+
+      // Use platform authenticator and discoverable credential
+      options.authenticatorSelection = {
+        // プラットフォーム間で同期されるパスキーのみを登録
+        authenticatorAttachment: 'platform',
+        requireResidentKey: true
+      }
+      const cred = await navigator.credentials.create({ publicKey: options });
+      console.log("cred:", cred);
+
+      const credential = {};
+      credential.id = cred.id;
+      // Base64URL encode `rawId`
+      credential.rawId = base64url.encode(cred.rawId);
+      credential.type = cred.type;
+
+      // `authenticatorAttachment` in PublicKeyCredential is a new addition in WebAuthn L3
+      if (cred.authenticatorAttachment) {
+        credential.authenticatorAttachment = cred.authenticatorAttachment;
+      }
+
+      // Base64URL encode some values
+      const clientDataJSON = base64url.encode(cred.response.clientDataJSON);
+      const attestationObject = base64url.encode(cred.response.attestationObject);
+
+      // Obtain transports if they are available.
+      const transports = cred.response.getTransports ? cred.response.getTransports() : [];
+
+      credential.response = {
+        clientDataJSON,
+        attestationObject,
+        transports
+      };
+
+      // Send the result to the server and return the promise.
+      return await _fetch('/auth/registerResponse', credential);
+    }
+
+    async function authenticate(conditional = false, idToken) {
+      // Fetch passkey request options from the server.
+      const options = await _fetch('/auth/signinRequest', {
+        idToken: idToken
+      });
+      console.log("options:", options);
+
+      // Base64URL decode the challenge
+      options.challenge = base64url.decode(options.challenge);
+
+      // `allowCredentials` empty array invokes an account selector by discoverable credentials.
+      options.allowCredentials = [];
+
+      console.log("navigator get:");
+      // Invoke WebAuthn get
+      const cred = await navigator.credentials.get({
+        publicKey: options,
+        // conditionalを指定で登録済みパスキーを表示（こっちだと動作しなかった）
+        // mediation: conditional ? 'conditional' : 'optional' 
+        mediation: 'required' // 明示的に使用するパスキーを指定
+      });
+      console.log("cred:", cred);
+
+      const credential = {};
+      credential.id = cred.id;
+      credential.type = cred.type;
+      // Base64URL encode `rawId`
+      credential.rawId = base64url.encode(cred.rawId);
+
+      // Base64URL encode some values
+      const clientDataJSON = base64url.encode(cred.response.clientDataJSON);
+      const authenticatorData = base64url.encode(cred.response.authenticatorData);
+      const signature = base64url.encode(cred.response.signature);
+      const userHandle = base64url.encode(cred.response.userHandle);
+
+      credential.response = {
+        clientDataJSON,
+        authenticatorData,
+        signature,
+        userHandle,
+      };
+
+      // Send the result to the server and return the promise.
+      return await _fetch(`/auth/signinResponse`, {
+        credential: credential,
+        idToken: idToken
+      });
+    };
+
+    async function handleRegister() {
+      try {
+        const idToken = getIdToken();
+
+        // WebAuthnで登録
+        const user = await registerCredential(idToken);
+        if (user) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign up succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign up failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'Sign up failed.';
+      }
+    }
+
+    async function handleLogin() {
+      try {
+        const idToken = getIdToken();
+
+        // WebAuthnで認証
+        const user = await authenticate(true, idToken);
+        console.log(user);
+        if (user) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign in succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign in failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'Sign in failed.';
+      }
+    }
+
+    async function handleNormalRegister() {
+      try {
+        const idToken = getIdToken();
+        const user = await _fetch('/auth/normal/signup', {idToken: idToken})
+
+        if(user) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign up succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign up failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'Sign up failed.';
+      }
+    }
+
+    async function handleNormalLogin() {
+      try {
+        const idToken = getIdToken();
+        const user = await _fetch('/auth/normal/signin', {idToken: idToken})
+
+        if(user) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign in succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'Sign in failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'Sign in failed.';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () { 
+      const idToken = getIdToken();
+      // ID TokenをlocalStorageに保存
+      window.localStorage.setItem('idToken', idToken);
+    });
+
+    document.getElementById('registerButton').addEventListener('click', handleRegister);
+    document.getElementById('loginButton').addEventListener('click', handleLogin);
+    document.getElementById('normalRegisterButton').addEventListener('click', handleNormalRegister);
+    document.getElementById('normalLoginButton').addEventListener('click', handleNormalLogin);
+  </script>
 </body>
 </html>
