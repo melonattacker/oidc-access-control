@@ -8,8 +8,12 @@
   <button id="loginButton">Login</button>
   <button id="normalRegisterButton">Normal Register</button>
   <button id="normalLoginButton">Normal Login</button>
+  <button id="afterLoginRequestButton">After Login Request</button>
 
   <script>
+    // memory storage
+    let randBytes = null;
+
     /**
      * Sends a POST request with payload. Throws when the response is not 200.
      * @param path The endpoint path.
@@ -59,6 +63,26 @@
         return bin.buffer;
       }
     };
+
+    // generate random bytes
+    function generateRandomBytes(length) {
+      var array = new Uint8Array(length);
+      window.crypto.getRandomValues(array);
+      return arrayToHex(array);
+    }
+
+    function arrayToHex(array) {
+      return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // generate hash
+    async function digestMessage(message) {
+      const msgUint8 = new TextEncoder().encode(message); // encode as (utf-8) Uint8Array
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8); // hash the message
+      const hashArray = Array.from(new Uint8Array(hashBuffer)); // convert buffer to byte array
+      const hashHex = arrayToHex(hashArray); // convert bytes to hex string
+      return hashHex;
+    }
 
     function getIdToken() {
       const hash = window.location.hash.substr(1); 
@@ -120,7 +144,7 @@
       return await _fetch('/auth/registerResponse', credential);
     }
 
-    async function authenticate(conditional = false, idToken) {
+    async function authenticate(conditional = false, idToken, randBytes) {
       // Fetch passkey request options from the server.
       const options = await _fetch('/auth/signinRequest', {
         idToken: idToken
@@ -165,7 +189,8 @@
       // Send the result to the server and return the promise.
       return await _fetch(`/auth/signinResponse`, {
         credential: credential,
-        idToken: idToken
+        idToken: idToken,
+        randBytes: randBytes
       });
     };
 
@@ -193,9 +218,10 @@
     async function handleLogin() {
       try {
         const idToken = getIdToken();
+        randBytes = generateRandomBytes(32);
 
         // WebAuthnで認証
-        const user = await authenticate(true, idToken);
+        const user = await authenticate(true, idToken, randBytes);
         console.log(user);
         if (user) {
           const content = document.getElementById('content');
@@ -252,6 +278,41 @@
       }
     }
 
+    async function handleAfterLoginRequest() {
+      try {
+        if (!randBytes) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in request failed.';
+          return;
+        }
+
+        // get nonce
+        const nonceRes = await _fetch('/nonce');
+        const nonce = nonceRes.nonce;
+
+        console.log("randBytes:", randBytes);
+        console.log("nonce:", nonce);
+
+        // generate hash
+        const hash = await digestMessage(randBytes+nonce);
+        console.log("hash:", hash);
+        const res = await _fetch('/after/signin', {hash: hash});
+
+        if(res.verified) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in request succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in request failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'After sigin in request failed.';
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', async function () { 
       const idToken = getIdToken();
       // ID TokenをlocalStorageに保存
@@ -262,6 +323,7 @@
     document.getElementById('loginButton').addEventListener('click', handleLogin);
     document.getElementById('normalRegisterButton').addEventListener('click', handleNormalRegister);
     document.getElementById('normalLoginButton').addEventListener('click', handleNormalLogin);
+    document.getElementById('afterLoginRequestButton').addEventListener('click', handleAfterLoginRequest);
   </script>
 </body>
 </html>

@@ -50,7 +50,7 @@ const CredentialSchema = new mongoose.Schema({
   },
 });
 
-const requestLogSchema = new mongoose.Schema({
+const RequestLogSchema = new mongoose.Schema({
   sourceIp: String,
   userAgent: String,
   sentTime: Number,
@@ -58,9 +58,33 @@ const requestLogSchema = new mongoose.Schema({
   uid: String
 });
 
+const RandBytesSchema = new mongoose.Schema({
+  sub: { 
+    type: String, 
+    required: true
+  },
+  randBytes: {
+    type: String,
+    required: true
+  },
+});
+
+const NonceSchema = new mongoose.Schema({
+  sub: {
+    type: String,
+    required: true
+  },
+  nonce: {
+    type: String,
+    required: true
+  }
+});
+
 const UserModel = mongoose.model('User', UserSchema);
 const CredentialModel = mongoose.model('Credential', CredentialSchema);
-const RequestLogModel = mongoose.model('RequestLog', requestLogSchema);
+const RequestLogModel = mongoose.model('RequestLog', RequestLogSchema);
+const RandBytesModel = mongoose.model('RandBytes', RandBytesSchema);
+const NonceModel = mongoose.model('Nonce', NonceSchema);
 
 const Users = {
   findById: async (user_id) => {
@@ -150,10 +174,46 @@ const RequestLogs = {
   }
 }
 
+const RandBytes = {
+  create: async (randBytes) => {
+    const newRandBytes = new RandBytesModel(randBytes);
+    return await newRandBytes.save();
+  },
+
+  findBySub: async (sub) => {
+    const result = await RandBytesModel.find({ sub: sub });
+    return result;
+  },
+
+  removeBySub: async (sub) => {
+    const result = await RandBytesModel.deteleMany({ sub: sub });
+    return result;
+  }
+}
+
+const Nonce = {
+  create: async (nonce) => {
+    const newNonce = new NonceModel(nonce);
+    return await newNonce.save();
+  },
+
+  findBySub: async (sub) => {
+    const result = await NonceModel.find({ sub: sub });
+    return result;
+  },
+
+  removeBySub: async (sub) => {
+    const result = await NonceModel.deteleMany({ sub: sub });
+    return result;
+  }
+}
+
 module.exports = {
   connect,
   disconnect,
   Users,
   Credentials,
-  RequestLogs
+  RequestLogs,
+  RandBytes,
+  Nonce
 }

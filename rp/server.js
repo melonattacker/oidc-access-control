@@ -14,7 +14,7 @@ const {
   verifyAuthenticationResponse
 } = require('@simplewebauthn/server');
 const { isoBase64URL } = require('@simplewebauthn/server/helpers');
-const { connect, Users, Credentials, RequestLogs } = require('./db.js');
+const { connect, Users, Credentials, RequestLogs, RandBytes, Nonce } = require('./db.js');
 
 const app = express();
 const port = 4444;
@@ -69,7 +69,7 @@ function getKey(header, callback){
 
 // index page
 app.get('/', (req, res) => {
-  res.render('index', { userId: req.session.userId });
+  res.render('index', { username: req.session.username });
 });
 
 // send authentication request to IdP
@@ -92,68 +92,72 @@ app.get('/callback', async (req, res) => {
   res.render('callback');
 });
 
-// process ID token
-app.post('/callback', async (req, res) => {
-  try {
-    const { idToken } = req.body;
-    if (!idToken) {
-      return res.status(400).send('Missing ID token');
-    }
+// // process ID token
+// app.post('/callback', async (req, res) => {
+//   try {
+//     const { idToken } = req.body;
+//     if (!idToken) {
+//       return res.status(400).send('Missing ID token');
+//     }
 
-    // Verify ID token
-    const decoded = await new Promise((resolve, reject) => {
-      jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(decodedToken);
-        }
-      });
-    });
+//     // Verify ID token
+//     const decoded = await new Promise((resolve, reject) => {
+//       jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
+//         if (err) {
+//           reject(err);
+//         } else {
+//           resolve(decodedToken);
+//         }
+//       });
+//     });
 
-    const userId = decoded.sub; // sub claim is the user identifier
-    if (!users[userId]) {
-      // generate verification URL
-      const verificationToken = crypto.randomBytes(16).toString('hex');
-      const verificationUrl = `http://localhost:${port}/verify-email?token=${verificationToken}`;
+//     const userId = decoded.sub; // sub claim is the user identifier
+//     if (!users[userId]) {
+//       // generate verification URL
+//       const verificationToken = crypto.randomBytes(16).toString('hex');
+//       const verificationUrl = `http://localhost:${port}/verify-email?token=${verificationToken}`;
 
-      // save verification token
-      verificationTokens[verificationToken] = { userId, data: decoded };
+//       // save verification token
+//       verificationTokens[verificationToken] = { userId, data: decoded };
 
-      // return verification URL
-      return res.json({ status: 'Verification email sent', verificationUrl: verificationUrl });
-    } else {
-      // Set session information
-      req.session.userId = userId;
-      res.json({ status: 'Logged in', userId: userId });
-    } 
-  } catch (error) {
-    res.status(400).send(`Invalid ID token: ${error.message}`);
-  }
-});
+//       // return verification URL
+//       return res.json({ status: 'Verification email sent', verificationUrl: verificationUrl });
+//     } else {
+//       // Set session information
+//       req.session.userId = userId;
+//       res.json({ status: 'Logged in', userId: userId });
+//     } 
+//   } catch (error) {
+//     res.status(400).send(`Invalid ID token: ${error.message}`);
+//   }
+// });
 
-// email verification endpoint
-app.get('/verify-email', (req, res) => {
-  const { token } = req.query;
+// // email verification endpoint
+// app.get('/verify-email', (req, res) => {
+//   const { token } = req.query;
 
-  const verificationToken = verificationTokens[token];
-  if (!verificationToken) {
-    return res.render('verify-email',  { verified: false });
-  }
+//   const verificationToken = verificationTokens[token];
+//   if (!verificationToken) {
+//     return res.render('verify-email',  { verified: false });
+//   }
 
-  // Verification successful
-  delete verificationTokens[token]; // Remove the token after verification
+//   // Verification successful
+//   delete verificationTokens[token]; // Remove the token after verification
 
-  const userId = verificationToken.userId;
-  users[userId] = { userId, data: verificationToken.data };
+//   const userId = verificationToken.userId;
+//   users[userId] = { userId, data: verificationToken.data };
 
-  // Set session information
-  req.session.userId = userId;
-  res.render('verify-email', { verified: true });
-});
+//   // Set session information
+//   req.session.userId = userId;
+//   res.render('verify-email', { verified: true });
+// });
 
-app.get('/logout', (req, res) => {
+app.get('/logout', async(req, res) => {
+  // delete all random bytes
+  await RandBytes.deleteBySub(req.session.username);
+  // destroy the session
   req.session.destroy();
+
   res.redirect('/');
 });
 
@@ -386,6 +390,13 @@ app.post('/auth/signinResponse', async (req, res) => {
   const expectedOrigin = getOrigin(req.get('User-Agent'));
   const expectedRPID = process.env.HOSTNAME;
 
+  // Get random values
+  const randBytes = req.body.randBytes;
+
+  if(!randBytes) {
+    return res.status(400).json({ error: 'Missing random bytes.' });
+  }
+
   try {
 
       // Find the matching credential from the credential ID
@@ -453,6 +464,12 @@ app.post('/auth/signinResponse', async (req, res) => {
       const userAgent = req.headers['user-agent'];
       console.log(`IP: ${sourceIp}`);
       console.log(`User Agent: ${userAgent}`);
+
+      // Save random bytes
+      await RandBytes.create({
+        sub: claims.sub,
+        randBytes: randBytes,
+      });
       
       // Start a new session.
       req.session.username = user.username;
@@ -547,6 +564,63 @@ app.post('/auth/normal/signin', async (req, res) => {
       return res.status(400).json({ error: e.message });
   }
 });
+
+// get nonce 
+app.post('/nonce', async (req, res) => {
+  try {
+    if (!req.session.username) {
+      return res.status(400).json({ error: 'Please sign in.' });
+    }
+    
+    const nonce = crypto.randomBytes(16).toString('hex');
+    await Nonce.create({
+      sub: req.session.username,
+      nonce: nonce,
+    });
+    return res.json({ nonce: nonce });
+  } catch (e) {
+    console.error(e);
+    return res.status(400).json({ error: e.message });
+  }
+});
+
+// after sign in request
+app.post('/after/signin', async(req, res) => {
+  try {
+    if (!req.session.username) {
+      return res.status(400).json({ error: 'Please sign in.' });
+    }
+
+    if (!req.body.hash) {
+      return res.status(400).json({ error: 'Missing hash.' });
+    }
+    
+    const hash = req.body.hash;
+
+    // get nonce
+    const nonceArray = await Nonce.findBySub(req.session.username);
+    const randBytesArray = await RandBytes.findBySub(req.session.username);
+    console.log("nonceArray:", nonceArray);
+    console.log("randBytesArray:", randBytesArray);
+
+    // verify hash
+    for (let i = 0; i < randBytesArray.length; i++) {
+      for (let j = 0; j < nonceArray.length; j++) {
+        const expectedHash = crypto.createHash('sha256').update(randBytesArray[i].randBytes+nonceArray[j].nonce).digest('hex');
+        console.log("hash:", hash);
+        console.log("expectedHash:", expectedHash);
+        if (expectedHash === hash) {
+          return res.json({ verified: true });
+        }
+      }
+    }
+    return res.json({ verified: false });
+
+  } catch(e) {
+    console.error(e);
+    return res.status(400).json({ error: e.message });
+  }
+})
 
 app.listen(port, () => {
   console.log(`RP is running at http://localhost:${port}`);
