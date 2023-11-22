@@ -17,6 +17,11 @@ const UserSchema = new mongoose.Schema({
   },
   username: { type: String, required: true, unique: true },
   sub: { type: String, required: true, unique: true },
+  registered: {
+    type: Boolean,
+    required: true,
+    default: false,
+  }
 });
 
 
@@ -51,11 +56,18 @@ const CredentialSchema = new mongoose.Schema({
 });
 
 const RequestLogSchema = new mongoose.Schema({
-  sourceIp: String,
-  userAgent: String,
-  sentTime: Number,
-  iat: Number,
-  uid: String
+  sub: {
+    type: String,
+    required: true,
+  },
+  sourceIp: {
+    type: String,
+    required: true,
+  },
+  userAgent: {
+    type: String,
+    required: true,
+  },
 });
 
 const RandBytesSchema = new mongoose.Schema({
@@ -80,11 +92,27 @@ const NonceSchema = new mongoose.Schema({
   }
 });
 
+const VerificationTokenSchema = new mongoose.Schema({
+  sub: {
+    type: String,
+    required: true,
+  },
+  username: {
+    type: String,
+    required: true,
+  },
+  token: {
+    type: String,
+    required: true,
+  }
+});
+
 const UserModel = mongoose.model('User', UserSchema);
 const CredentialModel = mongoose.model('Credential', CredentialSchema);
 const RequestLogModel = mongoose.model('RequestLog', RequestLogSchema);
 const RandBytesModel = mongoose.model('RandBytes', RandBytesSchema);
 const NonceModel = mongoose.model('Nonce', NonceSchema);
+const VerificationTokenModel = mongoose.model('VerificationToken', VerificationTokenSchema);
 
 const Users = {
   findById: async (user_id) => {
@@ -103,10 +131,7 @@ const Users = {
   },
 
   update: async (user) => {
-    console.log("user:", user);
-    console.log("User ID:", user._id);
     const updatedUser = await UserModel.findByIdAndUpdate(user.id, user, { new: true});
-    console.log("updatedUser:", updatedUser);
     return updatedUser;
   },
 
@@ -208,6 +233,23 @@ const Nonce = {
   }
 }
 
+const VerificationToken = {
+  create: async (token) => {
+    const newToken = new VerificationTokenModel(token);
+    return await newToken.save();
+  },
+
+  findByToken: async (token) => {
+    const result = await VerificationTokenModel.findOne({ token: token });
+    return result;
+  },
+
+  removeBySub: async (sub) => {
+    const result = await VerificationTokenModel.deteleMany({ sub: sub });
+    return result;
+  }
+}
+
 module.exports = {
   connect,
   disconnect,
@@ -215,5 +257,6 @@ module.exports = {
   Credentials,
   RequestLogs,
   RandBytes,
-  Nonce
+  Nonce,
+  VerificationToken
 }

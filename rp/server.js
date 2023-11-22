@@ -14,7 +14,7 @@ const {
   verifyAuthenticationResponse
 } = require('@simplewebauthn/server');
 const { isoBase64URL } = require('@simplewebauthn/server/helpers');
-const { connect, Users, Credentials, RequestLogs, RandBytes, Nonce } = require('./db.js');
+const { connect, Users, Credentials, RequestLogs, RandBytes, Nonce, VerificationToken } = require('./db.js');
 
 const app = express();
 const port = 4444;
@@ -92,65 +92,46 @@ app.get('/callback', async (req, res) => {
   res.render('callback');
 });
 
-// // process ID token
-// app.post('/callback', async (req, res) => {
-//   try {
-//     const { idToken } = req.body;
-//     if (!idToken) {
-//       return res.status(400).send('Missing ID token');
-//     }
+// process ID token and send verification email
+app.post('/callback', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    console.log("idToken:", idToken);
+    if (!idToken) {
+      return res.status(400).send('Missing ID token');
+    }
 
-//     // Verify ID token
-//     const decoded = await new Promise((resolve, reject) => {
-//       jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
-//         if (err) {
-//           reject(err);
-//         } else {
-//           resolve(decodedToken);
-//         }
-//       });
-//     });
+    // Verify ID token
+    const decoded = await new Promise((resolve, reject) => {
+      jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(decodedToken);
+        }
+      });
+    });
 
-//     const userId = decoded.sub; // sub claim is the user identifier
-//     if (!users[userId]) {
-//       // generate verification URL
-//       const verificationToken = crypto.randomBytes(16).toString('hex');
-//       const verificationUrl = `http://localhost:${port}/verify-email?token=${verificationToken}`;
+    // generate verification URL
+    const verificationToken = crypto.randomBytes(16).toString('hex');
+    // const verificationUrl = `http://localhost:${port}/callback?token=${verificationToken}`;
 
-//       // save verification token
-//       verificationTokens[verificationToken] = { userId, data: decoded };
+    // save verification token
+    VerificationToken.create({
+      sub: decoded.sub,
+      username: decoded.name,
+      token: verificationToken,
+    });
 
-//       // return verification URL
-//       return res.json({ status: 'Verification email sent', verificationUrl: verificationUrl });
-//     } else {
-//       // Set session information
-//       req.session.userId = userId;
-//       res.json({ status: 'Logged in', userId: userId });
-//     } 
-//   } catch (error) {
-//     res.status(400).send(`Invalid ID token: ${error.message}`);
-//   }
-// });
+    // send verification email (not implemented)
 
-// // email verification endpoint
-// app.get('/verify-email', (req, res) => {
-//   const { token } = req.query;
+    // send verification token
+    res.json({ message: 'Verification email sent.', verificationToken: verificationToken });
 
-//   const verificationToken = verificationTokens[token];
-//   if (!verificationToken) {
-//     return res.render('verify-email',  { verified: false });
-//   }
-
-//   // Verification successful
-//   delete verificationTokens[token]; // Remove the token after verification
-
-//   const userId = verificationToken.userId;
-//   users[userId] = { userId, data: verificationToken.data };
-
-//   // Set session information
-//   req.session.userId = userId;
-//   res.render('verify-email', { verified: true });
-// });
+  } catch (error) {
+    res.status(400).send(`Invalid ID token: ${error.message}`);
+  }
+});
 
 app.get('/logout', async(req, res) => {
   // delete all random bytes
@@ -204,8 +185,8 @@ function getOrigin(userAgent) {
 * If the session doesn't contain `signed-in`, consider the user is not authenticated.
 **/
 async function sessionCheck(req, res, next) {
-  if (!req.session['signed-in'] || !req.session.username) {
-    return res.status(401).json({ error: 'not signed in.' });
+  if (!req.session.username) {
+    return res.status(401).json({ error: 'not accepted yet' });
   }
   const user = await Users.findByUsername(req.session.username);
   if (!user) {
@@ -218,24 +199,19 @@ async function sessionCheck(req, res, next) {
 // FIDO related endpoints
 // Get options for creating new credentials
 app.post('/auth/registerRequest', async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) {
-    return res.status(400).send('Missing ID token');
+  const { verificationToken } = req.body;
+  if (!verificationToken) {
+    return res.status(400).send('Missing verification token');
   }
-  // verify ID token
-  const claims = await new Promise((resolve, reject) => {
-    jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(decodedToken);
-      }
-    });
-  });
-  console.log("claims:", claims);
+
+  // vefify verification token
+  const token = await VerificationToken.findByToken(verificationToken);
+  if (!token) {
+    return res.status(400).send('Invalid verification token');
+  }
 
   // Check if the user already exists.
-  let user = await Users.findBySub(claims.sub);
+  let user = await Users.findBySub(token.sub);
   if (user) {
       // User already exists.
       return res.status(400).json({ error: 'User already exists.' });
@@ -244,20 +220,20 @@ app.post('/auth/registerRequest', async (req, res) => {
   // Create a new user.
   user = {
       id: isoBase64URL.fromBuffer(crypto.randomBytes(32)),
-      username: claims.name,
-      sub: claims.sub,
+      username: token.username,
+      sub: token.sub,
+      registered: false, // not registered yet
   };
   await Users.create(user);
 
-  req.session['signed-in'] = 'yes';
-  req.session.username = claims.name;
+  req.session.username = user.sub;
 
   // Create `excludeCredentials` from a list of stored credentials.
   const excludeCredentials = [];
-  const credentials = await Credentials.findByUserId(claims.sub);
+  const credentials = await Credentials.findByUserId(user.sub);
   for (const cred of credentials) {
       excludeCredentials.push({
-          id: isoBase64URL.toBuffer(claims.sub),
+          id: isoBase64URL.toBuffer(user.sub),
           type: 'public-key',
           transports: cred.transports,
       });
@@ -276,7 +252,7 @@ app.post('/auth/registerRequest', async (req, res) => {
       rpID: process.env.HOSTNAME,
       userID: user.sub,
       userName: user.username,
-      userDisplayName: claims.preferred_username,
+      userDisplayName: user.username,
       // Prompt users for additional information about the authenticator.
       attestationType,
       // Prevent users from re-registering existing authenticators
@@ -333,6 +309,10 @@ app.post('/auth/registerResponse', sessionCheck, async (req, res) => {
         user_id: user.id,
       });
 
+      // Update the user's registration status.
+      user.registered = true;
+      await Users.update(user);
+
       // Delete the challenge from the session.
       delete req.session.challenge;
   
@@ -364,6 +344,16 @@ app.post('/auth/signinRequest', async (req, res) => {
         });
       });
       console.log("claims:", claims);
+
+      // Check user's registration status.
+      const user = await Users.findBySub(claims.sub);
+      console.log("user:", user);
+      if (!user) {
+          throw new Error('User not found.');
+      }
+      if (!user.registered) {
+          throw new Error('User not registered.');
+      }
 
       // Use SimpleWebAuthn's handy function to create a new authentication request.
       const options = await generateAuthenticationOptions({
@@ -458,12 +448,18 @@ app.post('/auth/signinResponse', async (req, res) => {
       });
       console.log("claims:", claims);
 
-      // IP address and User Agent
+      // Save IP address and User Agent
       const remoteAddress = req.socket.remoteAddress;
       const sourceIp = remoteAddress.split(":").pop();
       const userAgent = req.headers['user-agent'];
       console.log(`IP: ${sourceIp}`);
       console.log(`User Agent: ${userAgent}`);
+
+      await RequestLogs.create({
+        sub: claims.sub,
+        sourceIp: sourceIp,
+        userAgent: userAgent,
+      });
 
       // Save random bytes
       await RandBytes.create({
@@ -472,7 +468,7 @@ app.post('/auth/signinResponse', async (req, res) => {
       });
       
       // Start a new session.
-      req.session.username = user.username;
+      req.session.username = claims.sub;
       req.session['signed-in'] = 'yes';
   
       return res.json(user);
@@ -519,7 +515,7 @@ app.post('/auth/normal/signup', async (req, res) => {
       await Users.create(user);
 
       req.session['signed-in'] = 'yes';
-      req.session.username = claims.name;
+      req.session.username = claims.sub;
 
       return res.json(user);
 
@@ -554,7 +550,7 @@ app.post('/auth/normal/signin', async (req, res) => {
       }
 
       // Start a new session.
-      req.session.username = user.username;
+      req.session.username = user.sub;
       req.session['signed-in'] = 'yes';
   
       return res.json(user);
@@ -603,17 +599,38 @@ app.post('/after/signin', async(req, res) => {
     console.log("nonceArray:", nonceArray);
     console.log("randBytesArray:", randBytesArray);
 
+
     // verify hash
+    let hashResult = false;
     for (let i = 0; i < randBytesArray.length; i++) {
       for (let j = 0; j < nonceArray.length; j++) {
         const expectedHash = crypto.createHash('sha256').update(randBytesArray[i].randBytes+nonceArray[j].nonce).digest('hex');
         console.log("hash:", hash);
         console.log("expectedHash:", expectedHash);
         if (expectedHash === hash) {
-          return res.json({ verified: true });
+          hashResult = true;
         }
       }
     }
+
+    // verify sourceIp and userAgent
+    let sourceResult = false;
+    const remoteAddress = req.socket.remoteAddress;
+    const sourceIp = remoteAddress.split(":").pop();
+    const userAgent = req.headers['user-agent'];
+    console.log(`IP: ${sourceIp}`);
+    console.log(`User Agent: ${userAgent}`);
+  
+    const logs = await RequestLogs.findByIPAndUA(sourceIp, userAgent);
+    console.log("logs:", logs);
+    if (logs.length > 0) {
+      sourceResult = true;
+    }
+
+    if (hashResult && sourceResult) {
+      return res.json({ verified: true });
+    }
+
     return res.json({ verified: false });
 
   } catch(e) {

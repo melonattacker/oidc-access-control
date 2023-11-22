@@ -92,8 +92,13 @@
     }
 
     async function registerCredential(idToken) {
-      const options = await _fetch('/auth/registerRequest', {
+      console.log("idToken:", idToken);
+      const callbackRes = await _fetch('/callback', {
         idToken: idToken
+      });
+
+      const options = await _fetch('/auth/registerRequest', {
+        verificationToken: callbackRes.verificationToken
       });
       console.log("options:", options);
 
