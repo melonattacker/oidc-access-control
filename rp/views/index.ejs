@@ -6,9 +6,9 @@
 <body>
     <h1>Welcome to the Demo !!</h1>
     <% if (!username) { %>
-        <p>Please <a href="/login">log in</a>.</p>
+        <p><a href="/login">Social login</a></p>
     <% } else { %>
-        <p>Welcome, <%= userId %> !!</p>
+        <p>Welcome, <%= username %> !!</p>
     <% } %>
 </body>
 </html>

@@ -479,106 +479,6 @@ app.post('/auth/signinResponse', async (req, res) => {
   }
 });
 
-// signup without FIDO
-app.post('/auth/normal/signup', async (req, res) => {
-  try {
-      const { idToken } = req.body;
-      if (!idToken) {
-        return res.status(400).send('Missing ID token');
-      }
-      // verify ID token
-      const claims = await new Promise((resolve, reject) => {
-        jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(decodedToken);
-          }
-        });
-      });
-      console.log("claims:", claims);
-
-      // Check if the user already exists.
-      let user = await Users.findBySub(claims.sub);
-      if (user) {
-          // User already exists.
-          return res.status(400).json({ error: 'User already exists.' });
-      }
-
-      // Create a new user.
-      user = {
-          id: isoBase64URL.fromBuffer(crypto.randomBytes(32)),
-          username: claims.name,
-          sub: claims.sub,
-      };
-      await Users.create(user);
-
-      req.session['signed-in'] = 'yes';
-      req.session.username = claims.sub;
-
-      return res.json(user);
-
-  } catch(e) {
-      console.error(e);
-      return res.status(400).json({ error: e.message });
-  }
-});
-
-// signin without FIDO
-app.post('/auth/normal/signin', async (req, res) => {
-  try {
-      const { idToken } = req.body;
-      if (!idToken) {
-        return res.status(400).send('Missing ID token');
-      }
-      // verify ID token
-      const claims = await new Promise((resolve, reject) => {
-        jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(decodedToken);
-          }
-        });
-      });
-      console.log("claims:", claims);
-
-      const user = await Users.findByUsername(claims.name);
-      if (!user) {
-          throw new Error('User not found.');
-      }
-
-      // Start a new session.
-      req.session.username = user.sub;
-      req.session['signed-in'] = 'yes';
-  
-      return res.json(user);
-
-  } catch (e) {
-      console.error(e);
-      return res.status(400).json({ error: e.message });
-  }
-});
-
-// get nonce 
-app.post('/nonce', async (req, res) => {
-  try {
-    if (!req.session.username) {
-      return res.status(400).json({ error: 'Please sign in.' });
-    }
-    
-    const nonce = crypto.randomBytes(16).toString('hex');
-    await Nonce.create({
-      sub: req.session.username,
-      nonce: nonce,
-    });
-    return res.json({ nonce: nonce });
-  } catch (e) {
-    console.error(e);
-    return res.status(400).json({ error: e.message });
-  }
-});
-
 // after sign in request
 app.post('/after/signin', async(req, res) => {
   try {
@@ -637,6 +537,121 @@ app.post('/after/signin', async(req, res) => {
     return res.status(400).json({ error: e.message });
   }
 })
+
+// signup without FIDO
+app.post('/auth/normal/signup', async (req, res) => {
+  try {
+      const { idToken } = req.body;
+      if (!idToken) {
+        return res.status(400).send('Missing ID token');
+      }
+      // verify ID token
+      const claims = await new Promise((resolve, reject) => {
+        jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(decodedToken);
+          }
+        });
+      });
+      console.log("claims:", claims);
+
+      // Check if the user already exists.
+      let user = await Users.findBySub(claims.sub);
+      if (user) {
+          // User already exists.
+          return res.status(400).json({ error: 'User already exists.' });
+      }
+
+      // Create a new user.
+      user = {
+          id: isoBase64URL.fromBuffer(crypto.randomBytes(32)),
+          username: claims.name,
+          sub: claims.sub,
+          registered: true,
+      };
+      await Users.create(user);
+
+      req.session.username = claims.sub;
+
+      return res.json(user);
+
+  } catch(e) {
+      console.error(e);
+      return res.status(400).json({ error: e.message });
+  }
+});
+
+// signin without FIDO
+app.post('/auth/normal/signin', async (req, res) => {
+  try {
+      const { idToken } = req.body;
+      if (!idToken) {
+        return res.status(400).send('Missing ID token');
+      }
+      // verify ID token
+      const claims = await new Promise((resolve, reject) => {
+        jwt.verify(idToken, getKey, { algorithms: ['RS256'] }, (err, decodedToken) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(decodedToken);
+          }
+        });
+      });
+      console.log("claims:", claims);
+
+      const user = await Users.findBySub(claims.sub);
+      if (!user) {
+          throw new Error('User not found.');
+      }
+
+      // Start a new session.
+      req.session.username = user.sub;
+      req.session['signed-in'] = 'yes';
+  
+      return res.json(user);
+
+  } catch (e) {
+      console.error(e);
+      return res.status(400).json({ error: e.message });
+  }
+});
+
+// after sign in request without FIDO
+app.post('/after/normal/signin', async(req, res) => {
+  try {
+    if (!req.session.username) {
+      return res.status(400).json({ error: 'Please sign in.' });
+    }
+
+    res.json({ verified: true });
+  }
+  catch(e) {
+    console.error(e);
+    return res.status(400).json({ error: e.message });
+  }
+})
+
+// get nonce 
+app.post('/nonce', async (req, res) => {
+  try {
+    if (!req.session.username) {
+      return res.status(400).json({ error: 'Please sign in.' });
+    }
+    
+    const nonce = crypto.randomBytes(16).toString('hex');
+    await Nonce.create({
+      sub: req.session.username,
+      nonce: nonce,
+    });
+    return res.json({ nonce: nonce });
+  } catch (e) {
+    console.error(e);
+    return res.status(400).json({ error: e.message });
+  }
+});
 
 app.listen(port, () => {
   console.log(`RP is running at http://localhost:${port}`);

@@ -4,11 +4,18 @@
 </head>
 <body>
   <p id="content">Submitting Callback...</p>
-  <button id="registerButton">Register</button>
-  <button id="loginButton">Login</button>
-  <button id="normalRegisterButton">Normal Register</button>
-  <button id="normalLoginButton">Normal Login</button>
-  <button id="afterLoginRequestButton">After Login Request</button>
+  <div>
+    <p>With FIDO</p>
+    <button id="registerButton">Register</button>
+    <button id="loginButton">Login</button>
+    <button id="afterLoginRequestButton">After Login Request</button>
+  </div>
+  <div>
+    <p>Without FIDO</p>
+    <button id="normalRegisterButton">Register</button>
+    <button id="normalLoginButton">Login</button>
+    <button id="normalAfterLoginRequestButton">After Login Request</button>
+  </div>
 
   <script>
     // memory storage
@@ -246,6 +253,41 @@
       }
     }
 
+    async function handleAfterLoginRequest() {
+      try {
+        if (!randBytes) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in request failed.';
+          return;
+        }
+
+        // get nonce
+        const nonceRes = await _fetch('/nonce');
+        const nonce = nonceRes.nonce;
+
+        console.log("randBytes:", randBytes);
+        console.log("nonce:", nonce);
+
+        // generate hash
+        const hash = await digestMessage(randBytes+nonce);
+        console.log("hash:", hash);
+        const res = await _fetch('/after/signin', {hash: hash});
+
+        if(res.verified) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in request succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in request failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'After sigin in request failed.';
+      }
+    }
+
     async function handleNormalRegister() {
       try {
         const idToken = getIdToken();
@@ -286,25 +328,9 @@
       }
     }
 
-    async function handleAfterLoginRequest() {
+    async function handleAfterNormalLoginRequest() {
       try {
-        if (!randBytes) {
-          const content = document.getElementById('content');
-          content.innerHTML = 'After sigin in request failed.';
-          return;
-        }
-
-        // get nonce
-        const nonceRes = await _fetch('/nonce');
-        const nonce = nonceRes.nonce;
-
-        console.log("randBytes:", randBytes);
-        console.log("nonce:", nonce);
-
-        // generate hash
-        const hash = await digestMessage(randBytes+nonce);
-        console.log("hash:", hash);
-        const res = await _fetch('/after/signin', {hash: hash});
+        const res = await _fetch('/after/normal/signin');
 
         if(res.verified) {
           const content = document.getElementById('content');
@@ -329,9 +355,10 @@
 
     document.getElementById('registerButton').addEventListener('click', handleRegister);
     document.getElementById('loginButton').addEventListener('click', handleLogin);
+    document.getElementById('afterLoginRequestButton').addEventListener('click', handleAfterLoginRequest);
     document.getElementById('normalRegisterButton').addEventListener('click', handleNormalRegister);
     document.getElementById('normalLoginButton').addEventListener('click', handleNormalLogin);
-    document.getElementById('afterLoginRequestButton').addEventListener('click', handleAfterLoginRequest);
+    document.getElementById('normalAfterLoginRequestButton').addEventListener('click', handleAfterNormalLoginRequest);
   </script>
 </body>
 </html>
