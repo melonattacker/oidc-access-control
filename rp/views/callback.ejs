@@ -149,7 +149,7 @@
       return await _fetch('/auth/registerResponse', credential);
     }
 
-    async function authenticate(conditional = false, idToken, randBytes) {
+    async function authenticate(conditional = false, idToken) {
       // Fetch passkey request options from the server.
       const options = await _fetch('/auth/signinRequest', {
         idToken: idToken
@@ -192,11 +192,15 @@
       };
 
       // Send the result to the server and return the promise.
-      return await _fetch(`/auth/signinResponse`, {
+      const res = await _fetch(`/auth/signinResponse`, {
         credential: credential,
         idToken: idToken,
-        randBytes: randBytes
       });
+
+      // Store random bytes
+      randBytes = res.randBytes;
+      console.log("randBytes:", randBytes);
+      return res.user;
     };
 
     async function handleRegister() {
@@ -223,10 +227,9 @@
     async function handleLogin() {
       try {
         const idToken = getIdToken();
-        randBytes = generateRandomBytes(32);
 
         // WebAuthnで認証
-        const user = await authenticate(true, idToken, randBytes);
+        const user = await authenticate(true, idToken);
         console.log(user);
         if (user) {
           const content = document.getElementById('content');

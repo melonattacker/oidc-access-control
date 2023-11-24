@@ -380,13 +380,6 @@ app.post('/auth/signinResponse', async (req, res) => {
   const expectedOrigin = getOrigin(req.get('User-Agent'));
   const expectedRPID = process.env.HOSTNAME;
 
-  // Get random values
-  const randBytes = req.body.randBytes;
-
-  if(!randBytes) {
-    return res.status(400).json({ error: 'Missing random bytes.' });
-  }
-
   try {
 
       // Find the matching credential from the credential ID
@@ -461,6 +454,9 @@ app.post('/auth/signinResponse', async (req, res) => {
         userAgent: userAgent,
       });
 
+      // Generate random bytes
+      const randBytes = crypto.randomBytes(16).toString('hex');
+
       // Save random bytes
       await RandBytes.create({
         sub: claims.sub,
@@ -471,7 +467,10 @@ app.post('/auth/signinResponse', async (req, res) => {
       req.session.username = claims.sub;
       req.session['signed-in'] = 'yes';
   
-      return res.json(user);
+      return res.json({
+        user: user,
+        randBytes: randBytes,
+      });
   } catch (e) {
       delete req.session.challenge;
   
