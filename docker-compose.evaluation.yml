@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  rp:
+    build: ./rp
+    ports:
+      - "4444:4444"
+    environment:
+      - IDP_HOST=idp
+      - REDIRECT_URI=http://rp:4444/callback
+      - MODE=evaluation
+    depends_on:
+      - idp
+      - mongo-rp
+  idp:
+    build: ./idp
+    ports:
+      - "4445:4445"
+    environment:
+      - REDIRECT_URI=http://rp:4444/callback
+  mongo-rp:
+    image: mongo
+    volumes:
+      - mongo-data-rp:/data/db
+      - ./mongo/init.js:/docker-entrypoint-initdb.d/init.js
+  attacker:
+    tty: true
+    build: ./evaluation
+    ports:
+      - 6666:6666
+    volumes:
+      - ./evaluation:/app
+    environment:
+      - RP_URL=http://rp:4444
+      - IDP_URL=http://idp:4445
+      - ATTACKER_URL=http://attacker:6666
+    command: python3 /app/access_pattern/attacker_server.py
+  victim:
+    tty: true
+    build: ./evaluation
+    volumes:
+      - ./evaluation:/app
+    environment:
+      - RP_URL=http://rp:4444
+      - IDP_URL=http://idp:4445
+      - ATTACKER_URL=http://attacker:6666
+
+volumes:
+  mongo-data-rp:
+    driver: local

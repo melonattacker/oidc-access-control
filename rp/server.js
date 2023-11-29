@@ -33,11 +33,12 @@ app.use(session({
 }));
 
 const RP_NAME = 'RP';
-const OP_HOST = process.env.OP_HOST === 'op' ? 'op' : 'localhost';
+const IDP_HOST = process.env.IDP_HOST === 'idp' ? 'idp' : 'localhost';
+const MODE = process.env.MODE || 'dev';
 
 app.use((req, res, next) => {
   process.env.HOSTNAME = req.hostname;
-  const protocol = process.env.NODE_ENV === 'localhost' ? 'http' : 'https';
+  const protocol = 'http';
   process.env.ORIGIN = `${protocol}://${req.headers.host}`;
   process.env.RP_NAME = RP_NAME;
   req.schema = 'https';
@@ -75,8 +76,13 @@ app.get('/', (req, res) => {
 // send authentication request to IdP
 app.get('/login', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const url = new URL(`http://localhost:4445/authorize`);
+  const nonce = crypto.randomBytes(16).toString('hex');
+  let url;
+  if (MODE === 'dev') {
+    url = new URL(`http://localhost:4445/authorize`);
+  } else {
+    url = new URL(`http://${IDP_HOST}:4445/authorize`);
+  }
   url.searchParams.set('response_type', 'id_token');
   url.searchParams.set('client_id', clientID);
   url.searchParams.set('redirect_uri', redirectUri);

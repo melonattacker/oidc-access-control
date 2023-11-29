@@ -3,10 +3,10 @@
 
 ```
 // build & run
-docker-compose up -d --build
+docker compose up -d --build
 
 // stop & remove
-docker-compose down -v
+docker compose down -v
 ```
 
 RP : `https://localhost:443`, IdP : `http://localhost:4445`
@@ -21,3 +21,14 @@ RP : `https://localhost:443`, IdP : `http://localhost:4445`
 6. If `Sign up succeeded.` is displayed, you have successfully signed up.
 7. Click `Login` -> Select your passkey
 8. If `Sign in succeeded.` is displayed, you have successfully signed in.
+
+## Evaluation
+
+### Setup
+```
+// build & run (evaluation)
+docker compose -f docker-compose.evaluation.yml up -d --build
+```
+
+### Threat1 : Access with victim's credential from victim's browser
+### Threat2 : Access with victim's credential from attacker's browser
