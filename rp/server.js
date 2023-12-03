@@ -1,5 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
+const https = require('https');
+const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
@@ -38,10 +40,9 @@ const MODE = process.env.MODE || 'dev';
 
 app.use((req, res, next) => {
   process.env.HOSTNAME = req.hostname;
-  const protocol = 'http';
+  const protocol = 'https';
   process.env.ORIGIN = `${protocol}://${req.headers.host}`;
   process.env.RP_NAME = RP_NAME;
-  req.schema = 'https';
   return next();
 });
 
@@ -218,19 +219,16 @@ app.post('/auth/registerRequest', async (req, res) => {
 
   // Check if the user already exists.
   let user = await Users.findBySub(token.sub);
-  if (user) {
-      // User already exists.
-      return res.status(400).json({ error: 'User already exists.' });
-  }
-
-  // Create a new user.
-  user = {
+  if (!user) {
+    // Create a new user.
+    user = {
       id: isoBase64URL.fromBuffer(crypto.randomBytes(32)),
       username: token.username,
       sub: token.sub,
       registered: false, // not registered yet
-  };
-  await Users.create(user);
+    };
+    await Users.create(user);
+  }
 
   req.session.username = user.sub;
 
@@ -659,6 +657,11 @@ app.post('/nonce', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+const httpsOptions = {
+  key: fs.readFileSync('./certs/key.pem'),
+  cert: fs.readFileSync('./certs/server.crt')
+};
+
+https.createServer(httpsOptions, app).listen(port, () => {
   console.log(`RP is running at http://localhost:${port}`);
 });

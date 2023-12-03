@@ -7,7 +7,7 @@ services:
       - "4444:4444"
     environment:
       - IDP_HOST=idp
-      - REDIRECT_URI=http://rp:4444/callback
+      - REDIRECT_URI=https://rp:4444/callback
       - MODE=evaluation
     depends_on:
       - idp
@@ -17,7 +17,7 @@ services:
     ports:
       - "4445:4445"
     environment:
-      - REDIRECT_URI=http://rp:4444/callback
+      - REDIRECT_URI=https://rp:4444/callback
   mongo-rp:
     image: mongo
     volumes:
@@ -31,7 +31,7 @@ services:
     volumes:
       - ./evaluation:/app
     environment:
-      - RP_URL=http://rp:4444
+      - RP_URL=https://rp:4444
       - IDP_URL=http://idp:4445
       - ATTACKER_URL=http://attacker:6666
     command: python3 /app/access_pattern/attacker_server.py
@@ -41,7 +41,7 @@ services:
     volumes:
       - ./evaluation:/app
     environment:
-      - RP_URL=http://rp:4444
+      - RP_URL=https://rp:4444
       - IDP_URL=http://idp:4445
       - ATTACKER_URL=http://attacker:6666
 

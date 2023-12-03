@@ -30,5 +30,18 @@ RP : `https://localhost:443`, IdP : `http://localhost:4445`
 docker compose -f docker-compose.evaluation.yml up -d --build
 ```
 
-### Threat1 : Access with victim's credential from victim's browser
-### Threat2 : Access with victim's credential from attacker's browser
+### Access with victim's credential from victim's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/credential/victim_browser.py   
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+sign in result (attacker):  <p id="content">Sign in failed.</p>
+```
+
+### Access with victim's credential from attacker's browser
+```
+docker compose -f docker-compose.evaluation.yml exec attacker bash
+# python3 access_pattern/credential/attacker_browser.py   
+sign in result (attacker):  <p id="content">Sign in failed.</p>
+```

@@ -7,7 +7,7 @@ services:
       - "4444:4444"
     environment:
       - IDP_HOST=idp
-      - REDIRECT_URI=http://localhost:4444/callback
+      - REDIRECT_URI=https://localhost:4444/callback
       - MODE=dev
     depends_on:
       - idp
@@ -17,7 +17,7 @@ services:
     ports:
       - "4445:4445"
     environment:
-      - REDIRECT_URI=http://localhost:4444/callback
+      - REDIRECT_URI=https://localhost:4444/callback
   mongo-rp:
     image: mongo
     volumes:

@@ -6,10 +6,6 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 
 RP_URL = os.environ.get('RP_URL') or 'http://localhost:4444'
 
-def get_random_name(n):
-   randlst = [random.choice(string.ascii_letters + string.digits) for i in range(n)]
-   return ''.join(randlst)
-
 # theft victim's credential
 victim_username = 'hoge'
 victim_password = 'hoge'
@@ -23,9 +19,9 @@ async def sso_flow(page):
         # Click login button
         await page.locator('button[type="submit"]').click(timeout=1000)
 
-        # Click yes button on consent page
-        await page.locator('input[name="yes"]').click(timeout=1000) 
-    except PlaywrightTimeoutError as e:
+        # Click continue button
+        await page.locator('input[value="Yes"]').click(timeout=1000)
+    except PlaywrightTimeoutError:
         print("Timeout!")
 
     return page
@@ -58,6 +54,7 @@ async def main():
         content = await page.content()
         soup = BeautifulSoup(content, 'html.parser')
         result = soup.find('p', id='content')
+        print("sign in result (attacker): ", result)
         assert("Sign in failed." in result)
 
 if __name__ == "__main__":

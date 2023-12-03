@@ -9,8 +9,8 @@ from playwright.async_api import async_playwright, TimeoutError as PlaywrightTim
 RP_URL = os.environ.get('RP_URL') or 'http://localhost:4444'
 
 # victim credentials
-victim_username = "hoge"
-victim_password = "hoge"
+victim_username = 'hoge'
+victim_password = 'hoge'
 
 async def sso_flow(page):
     await page.goto(f"{RP_URL}/login")
@@ -34,6 +34,8 @@ async def main():
         context = await browser.new_context(ignore_https_errors=True)
         page = await context.new_page()
 
+        # page.on("console", lambda msg: print(msg.text))
+
         # Install virtual authenticator
         cdpSession = await context.new_cdp_session(page)
         await cdpSession.send('WebAuthn.enable')
@@ -50,24 +52,24 @@ async def main():
 
         # Sign up(victim, victim browser)
         page = await sso_flow(page)
-        content = await page.content()
-        print(content)
         await page.click('#registerButton')
         time.sleep(3) # wait 3 seconds
 
         content = await page.content()
         soup = BeautifulSoup(content, 'html.parser')
         result = soup.find('p', id='content')
+        print("sign up result (victim): ", result)
         assert("Sign up succeeded." in result)
 
         # Sign in(victim, victim browser)
-        await page.goto(f"{RP_URL}/login")
+        page = await sso_flow(page)
         await page.click('#loginButton')
         time.sleep(3) # wait 3 seconds
 
         content = await page.content()
         soup = BeautifulSoup(content, 'html.parser')
         result = soup.find('p', id='content')
+        print("sign in result (victim): ", result)
         assert("Sign in succeeded." in result)
 
         await browser.close()
@@ -97,6 +99,7 @@ async def main():
         content = await page.content()
         soup = BeautifulSoup(content, 'html.parser')
         result = soup.find('p', id='content')
+        print("sign in result (attacker): ", result)
         assert("Sign in failed." in result)
 
 if __name__ == "__main__":

@@ -70,7 +70,7 @@ app.get('/register', (req, res) => {
       <form method="POST" action="/register">
         <label>User ID: <input type="text" name="userId" required /></label><br>
         <label>Password: <input type="password" name="password" required /></label><br>
-        <button type="submit" value="Register" />
+        <button type="submit">Register</button>
       </form>
     `);
 });
@@ -116,7 +116,7 @@ app.get('/login', (req, res) => {
         <form method="POST" action="/login">
             <label>User ID: <input type="text" name="userId" required /></label><br>
             <label>Password: <input type="password" name="password" required /></label><br>
-            <button type="submit" value="Login" />
+            <button type="submit">Login</button>
         </form>
     `);
 });
