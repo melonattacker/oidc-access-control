@@ -45,3 +45,18 @@ docker compose -f docker-compose.evaluation.yml exec attacker bash
 # python3 access_pattern/credential/attacker_browser.py   
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
+
+### Access with victim's id_token from victim's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/id_token/victim_browser.py
+```
+
+### Access with victim's id_token from attacker's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/id_token/attacker_browser_pre.py
+
+docker compose -f docker-compose.evaluation.yml exec attacker bash
+# python3 access_pattern/id_token/attacker_browser.py
+```
