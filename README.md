@@ -35,7 +35,16 @@ docker compose -f docker-compose.evaluation.yml up -d --build
 ```
 
 ### Access Pattern
-#### Access with victim's credential from victim's browser
+#### Legitimate User: Access from victim's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/legitimate/victim_browser.py
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+after sign in result (attacker):  <p id="content">After sigin in request succeeded.</p>
+```
+
+#### Attacker: Access with victim's credential from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/credential/victim_browser.py   
@@ -44,14 +53,14 @@ sign in result (victim):  <p id="content">Sign in succeeded.</p>
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-#### Access with victim's credential from attacker's browser
+#### Attacker: Access with victim's credential from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec attacker bash
 # python3 access_pattern/credential/attacker_browser.py   
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-#### Access with victim's id_token from victim's browser
+#### Attacker: Access with victim's id_token from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/id_token/victim_browser.py
@@ -61,7 +70,7 @@ sign in result (victim):  <p id="content">Sign in succeeded.</p>
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-#### Access with victim's id_token from attacker's browser
+#### Attacker: Access with victim's id_token from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/id_token/attacker_browser_pre.py
@@ -75,16 +84,17 @@ docker compose -f docker-compose.evaluation.yml exec attacker bash
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-#### Access with victim's session_token and secret from victim's browser
+#### Attacker: Access with victim's session_token and secret from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/secret/victim_browser.py
 sign up result (victim):  <p id="content">Sign up succeeded.</p>
 sign in result (victim):  <p id="content">Sign in succeeded.</p>
 after sign in result (attacker):  <p id="content">After sigin in request succeeded.</p>
+after sign in confidential result (attacker):  <p id="content">After sigin in confidential request failed.</p>
 ```
 
-#### Access with victim's session_token and secret from attacker's browser
+#### Attacker: Access with victim's session_token and secret from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/secret/attacker_browser_pre.py
@@ -104,7 +114,7 @@ cookies:  [{'name': 'connect.sid', 'value': 's%3AXfrJAZ2cJ_gXzr8JZUbCnX_kdCh_IIS
 after sign in result (attacker):  <p id="content">After sigin in request failed.</p>
 ```
 
-#### Access with victim's session_token and hash from victim's browser
+#### Attacker: Access with victim's session_token and hash from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/hash/victim_browser.py
@@ -115,7 +125,7 @@ hash:  7030e9ee35007c07c96a3c3ea6dc4dd637107b5516e496b68f8c098d3f3cbb5d
 after sign in result (attacker):  {'verified': True}
 ```
 
-#### Access with victim's session_token and hash from attacker's browser
+#### Attacker: Access with victim's session_token and hash from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/hash/attacker_browser_pre.py
