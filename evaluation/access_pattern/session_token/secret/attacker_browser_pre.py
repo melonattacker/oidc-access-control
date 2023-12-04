@@ -78,6 +78,7 @@ async def main():
             if cookie['name'] == 'connect.sid':
                 session_token = cookie['value']
                 break
+        print("session_token: ", session_token)
         assert(session_token != None)
 
         # Get secret

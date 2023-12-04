@@ -50,28 +50,51 @@ sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/id_token/victim_browser.py
+ign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+...
+sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
 ### Access with victim's id_token from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/id_token/attacker_browser_pre.py
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+...
+ok
 
 docker compose -f docker-compose.evaluation.yml exec attacker bash
 # python3 access_pattern/id_token/attacker_browser.py
+sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
 ### Access with victim's session_token and secret from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/secret/victim_browser.py
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+after sign in result (attacker):  <p id="content">After sigin in request succeeded.</p>
 ```
 
 ### Access with victim's session_token and secret from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/secret/attacker_browser_pre.py
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+session_token:  s%3AfmPIDVycNd-X2l1IVtBSom2CYYrgWkq1.FONwNQeIEcVNR8uJzukjCGiV7SnHBQz3%2BFYL3g%2Fyyp8
+secret:  54b247263b55770a9bb7f2ab4f9c7658
+ok
 
 docker compose -f docker-compose.evaluation.yml exec attacker bash
 # python3 access_pattern/session_token/secret/attacker_browser.py
+session_token:  s%3AfmPIDVycNd-X2l1IVtBSom2CYYrgWkq1.FONwNQeIEcVNR8uJzukjCGiV7SnHBQz3%2BFYL3g%2Fyyp8
+secret:  54b247263b55770a9bb7f2ab4f9c7658
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+cookies:  [{'name': 'connect.sid', 'value': 's%3AXfrJAZ2cJ_gXzr8JZUbCnX_kdCh_IISu.2lzETWS8%2BRd50J1Y5m8twEewehXJNC65%2BazaOJgC938', 'domain': 'idp', 'path': '/', 'expires': -1, 'httpOnly': True, 'secure': False, 'sameSite': 'Lax'}, {'name': 'connect.sid', 'value': 's%3AfmPIDVycNd-X2l1IVtBSom2CYYrgWkq1.FONwNQeIEcVNR8uJzukjCGiV7SnHBQz3%2BFYL3g%2Fyyp8', 'domain': 'rp', 'path': '/', 'expires': -1, 'httpOnly': False, 'secure': False, 'sameSite': 'Lax'}]
+after sign in result (attacker):  <p id="content">After sigin in request failed.</p>
 ```

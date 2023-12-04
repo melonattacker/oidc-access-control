@@ -526,9 +526,14 @@ app.post('/after/signin', async(req, res) => {
   
     const logs = await RequestLogs.findByIPAndUA(sourceIp, userAgent);
     console.log("logs:", logs);
-    if (logs.length > 0) {
-      sourceResult = true;
+    for (let i = 0; i < logs.length; i++) {
+      if (logs[i].sub === req.session.username) {
+        sourceResult = true;
+      }
     }
+
+    console.log("hashResult:", hashResult);
+    console.log("sourceResult:", sourceResult);
 
     if (hashResult && sourceResult) {
       return res.json({ verified: true });
