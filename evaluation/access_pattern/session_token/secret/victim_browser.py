@@ -82,6 +82,29 @@ async def main():
         print("after sign in result (attacker): ", result)
         assert("After sigin in request succeeded." in result)
 
+        # After sigin in confidential request (attacker, victim's browser)
+        cdpSession = await context.new_cdp_session(page)
+        await cdpSession.send('WebAuthn.enable')
+        await cdpSession.send('WebAuthn.addVirtualAuthenticator', {
+            'options': {
+                'protocol': 'ctap2',
+                'transport': 'internal',
+                'automaticPresenceSimulation': True,
+                'hasResidentKey': True,
+                'hasUserVerification': True,
+                'isUserVerified': False,
+            }
+        })
+
+        await page.click('#afterLoginConfidentialRequestButton')
+        time.sleep(3) # wait 3 seconds
+       
+        content = await page.content()
+        soup = BeautifulSoup(content, 'html.parser')
+        result = soup.find('p', id='content')
+        print("after sign in confidential result (attacker): ", result)
+        assert("After sigin in confidential request failed." in result)
+
         await browser.close()
 
 if __name__ == "__main__":

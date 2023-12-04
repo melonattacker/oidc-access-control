@@ -9,11 +9,11 @@ docker compose up -d --build
 docker compose down -v
 ```
 
-RP : `https://localhost:443`, IdP : `http://localhost:4445`
+RP : `https://localhost:4444`, IdP : `http://localhost:4445`
 
 ## Demo
 
-1. Access to `https://localhost:443`
+1. Access to `https://localhost:4444`
 2. Click `Please log in`
 3. Log in with User ID : `hoge`, Password : `hoge`
 4. `Do you consent to share your information with the client?` -> Click `Yes`
@@ -21,6 +21,10 @@ RP : `https://localhost:443`, IdP : `http://localhost:4445`
 6. If `Sign up succeeded.` is displayed, you have successfully signed up.
 7. Click `Login` -> Select your passkey
 8. If `Sign in succeeded.` is displayed, you have successfully signed in.
+9. Click `After Login Request`
+10. If `After sigin in request succeeded.` is displayed, your request has been successfully processed.
+11. Click `After Login Confidential Request` -> Select your passkey
+12. If `After sigin in confidential request succeeded.` is displayed, your request has been successfully processed.
 
 ## Evaluation
 
@@ -30,7 +34,8 @@ RP : `https://localhost:443`, IdP : `http://localhost:4445`
 docker compose -f docker-compose.evaluation.yml up -d --build
 ```
 
-### Access with victim's credential from victim's browser
+### Access Pattern
+#### Access with victim's credential from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/credential/victim_browser.py   
@@ -39,14 +44,14 @@ sign in result (victim):  <p id="content">Sign in succeeded.</p>
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-### Access with victim's credential from attacker's browser
+#### Access with victim's credential from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec attacker bash
 # python3 access_pattern/credential/attacker_browser.py   
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-### Access with victim's id_token from victim's browser
+#### Access with victim's id_token from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/id_token/victim_browser.py
@@ -56,7 +61,7 @@ sign in result (victim):  <p id="content">Sign in succeeded.</p>
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-### Access with victim's id_token from attacker's browser
+#### Access with victim's id_token from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/id_token/attacker_browser_pre.py
@@ -70,7 +75,7 @@ docker compose -f docker-compose.evaluation.yml exec attacker bash
 sign in result (attacker):  <p id="content">Sign in failed.</p>
 ```
 
-### Access with victim's session_token and secret from victim's browser
+#### Access with victim's session_token and secret from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/secret/victim_browser.py
@@ -79,7 +84,7 @@ sign in result (victim):  <p id="content">Sign in succeeded.</p>
 after sign in result (attacker):  <p id="content">After sigin in request succeeded.</p>
 ```
 
-### Access with victim's session_token and secret from attacker's browser
+#### Access with victim's session_token and secret from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/secret/attacker_browser_pre.py
@@ -99,7 +104,7 @@ cookies:  [{'name': 'connect.sid', 'value': 's%3AXfrJAZ2cJ_gXzr8JZUbCnX_kdCh_IIS
 after sign in result (attacker):  <p id="content">After sigin in request failed.</p>
 ```
 
-### Access with victim's session_token and hash from victim's browser
+#### Access with victim's session_token and hash from victim's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/hash/victim_browser.py
@@ -110,7 +115,7 @@ hash:  7030e9ee35007c07c96a3c3ea6dc4dd637107b5516e496b68f8c098d3f3cbb5d
 after sign in result (attacker):  {'verified': True}
 ```
 
-### Access with victim's session_token and hash from attacker's browser
+#### Access with victim's session_token and hash from attacker's browser
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # python3 access_pattern/session_token/hash/attacker_browser_pre.py

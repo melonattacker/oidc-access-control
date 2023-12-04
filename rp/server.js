@@ -664,7 +664,7 @@ app.post('/after/signin', async(req, res) => {
 })
 
 // after sign in confidential request
-app.post('/after/signin', async(req, res) => {
+app.post('/after/signin/confidential', async(req, res) => {
   try {
     if (!req.session.username) {
       return res.status(400).json({ error: 'Please sign in.' });

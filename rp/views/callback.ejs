@@ -370,7 +370,7 @@
         // generate hash
         const hash = await digestMessage(randBytes+nonce);
         console.log("hash:", hash);
-        const res = await _fetch('/after/signin', {hash: hash});
+        const res = await _fetch('/after/signin/confidential', {hash: hash});
 
         if(res.verified) {
           const content = document.getElementById('content');
