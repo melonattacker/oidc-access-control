@@ -483,6 +483,119 @@ app.post('/auth/signinResponse', async (req, res) => {
   }
 });
 
+// fido auth without id_token for confidential request
+app.post('/auth/signinRequest/without/id_token', async (req, res) => {
+  try {
+      if (!req.session.username) {
+        return res.status(400).json({ error: 'Please sign in.' });
+      }
+
+      // Check user's registration status.
+      const user = await Users.findBySub(req.session.username);
+      console.log("user:", user);
+      if (!user) {
+          throw new Error('User not found.');
+      }
+      if (!user.registered) {
+          throw new Error('User not registered.');
+      }
+
+      // Use SimpleWebAuthn's handy function to create a new authentication request.
+      const options = await generateAuthenticationOptions({
+          rpID: process.env.HOSTNAME,
+          allowCredentials: [],
+      });
+  
+      // Keep the challenge value in a session.
+      req.session.challenge = options.challenge;
+
+      return res.json(options)
+  } catch (e) {
+      console.error(e);
+  
+      return res.status(400).json({ error: e.message });
+  }
+});
+
+// fido auth without id_token for confidential request
+app.post('/auth/signinResponse/without/id_token', async (req, res) => {
+  // Set expected values.
+  const credential = req.body.credential;
+  const expectedChallenge = req.session.challenge;
+  const expectedOrigin = getOrigin(req.get('User-Agent'));
+  const expectedRPID = process.env.HOSTNAME;
+
+  try {
+      if (!req.session.username) {
+        return res.status(400).json({ error: 'Please sign in.' });
+      }
+
+      // Find the matching credential from the credential ID
+      const cred = await Credentials.findById(credential.id);
+      if (!cred) {
+          throw new Error('Matching credential not found on the server. Try signing in with a password.');
+      }
+  
+      // Find the matching user from the user ID contained in the credential.
+      const user = await Users.findById(cred.user_id);
+      if (!user) {
+          throw new Error('User not found.');
+      }
+  
+      // Decode ArrayBuffers and construct an authenticator object.
+      const authenticator = {
+          credentialPublicKey: isoBase64URL.toBuffer(cred.publicKey),
+          credentialID: isoBase64URL.toBuffer(cred.id),
+          transports: cred.transports,
+      };
+  
+      // Use SimpleWebAuthn's handy function to verify the authentication request.
+      const verification = await verifyAuthenticationResponse({
+          response: credential,
+          expectedChallenge,
+          expectedOrigin,
+          expectedRPID,
+          authenticator,
+          requireUserVerification: false,
+      });
+  
+      const { verified, authenticationInfo } = verification;
+  
+      // If the authentication failed, throw.
+      if (!verified) {
+          throw new Error('User verification failed.');
+      }
+  
+      // Update the last used timestamp.
+      cred.last_used = (new Date()).getTime();
+      await Credentials.update(cred);
+  
+      // Delete the challenge from the session.
+      delete req.session.challenge;
+
+      // Generate random bytes
+      const randBytes = crypto.randomBytes(16).toString('hex');
+
+      // Save random bytes
+      await RandBytes.create({
+        sub: req.session.username,
+        randBytes: randBytes,
+      });
+
+      req.session.is_fido_done = true;
+  
+      return res.json({
+        user: user,
+        randBytes: randBytes,
+      });
+  } catch (e) {
+      delete req.session.challenge;
+  
+      console.error(e);
+      return res.status(400).json({ error: e.message });
+  }
+});
+
 // after sign in request
 app.post('/after/signin', async(req, res) => {
   try {
@@ -549,6 +662,77 @@ app.post('/after/signin', async(req, res) => {
     return res.status(400).json({ error: e.message });
   }
 })
+
+// after sign in confidential request
+app.post('/after/signin', async(req, res) => {
+  try {
+    if (!req.session.username) {
+      return res.status(400).json({ error: 'Please sign in.' });
+    }
+
+    if (!req.body.hash) {
+      return res.status(400).json({ error: 'Missing hash.' });
+    }
+
+    if (!req.session.is_fido_done) {
+      return res.status(400).json({ error: 'Please sign in with FIDO first.' });
+    }
+    
+    const hash = req.body.hash;
+
+    // get nonce
+    const nonceArray = await Nonce.findBySub(req.session.username);
+    const randBytesArray = await RandBytes.findBySub(req.session.username);
+    console.log("nonceArray:", nonceArray);
+    console.log("randBytesArray:", randBytesArray);
+
+
+    // verify hash
+    let hashResult = false;
+    for (let i = 0; i < randBytesArray.length; i++) {
+      for (let j = 0; j < nonceArray.length; j++) {
+        const expectedHash = crypto.createHash('sha256').update(randBytesArray[i].randBytes+nonceArray[j].nonce).digest('hex');
+        console.log("hash:", hash);
+        console.log("expectedHash:", expectedHash);
+        if (expectedHash === hash) {
+          hashResult = true;
+        }
+      }
+    }
+
+    // verify sourceIp and userAgent
+    let sourceResult = false;
+    const remoteAddress = req.socket.remoteAddress;
+    const sourceIp = remoteAddress.split(":").pop();
+    const userAgent = req.headers['user-agent'];
+    console.log(`IP: ${sourceIp}`);
+    console.log(`User Agent: ${userAgent}`);
+  
+    const logs = await RequestLogs.findByIPAndUA(sourceIp, userAgent);
+    console.log("logs:", logs);
+    for (let i = 0; i < logs.length; i++) {
+      if (logs[i].sub === req.session.username) {
+        sourceResult = true;
+      }
+    }
+
+    console.log("hashResult:", hashResult);
+    console.log("sourceResult:", sourceResult);
+
+    // delete nonce
+    await Nonce.removeBySub(req.session.username);
+
+    if (hashResult && sourceResult) {
+      return res.json({ verified: true });
+    }
+
+    return res.json({ verified: false });
+  } catch(e) {
+    console.error(e);
+    return res.status(400).json({ error: e.message });
+  }
+})
+
 
 // signup without FIDO
 app.post('/auth/normal/signup', async (req, res) => {

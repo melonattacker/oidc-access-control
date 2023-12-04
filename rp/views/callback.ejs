@@ -9,6 +9,7 @@
     <button id="registerButton">Register</button>
     <button id="loginButton">Login</button>
     <button id="afterLoginRequestButton">After Login Request</button>
+    <button id="afterLoginConfidentialRequestButton">After Login Confidential Request</button>
   </div>
   <div>
     <p>Without FIDO</p>
@@ -212,6 +213,57 @@
       return res.user;
     };
 
+    async function authenticateWithoutIDToken(conditional = false) {
+      // Fetch passkey request options from the server.
+      const options = await _fetch('/auth/signinRequest/without/id_token');
+      console.log("options:", options);
+
+      // Base64URL decode the challenge
+      options.challenge = base64url.decode(options.challenge);
+
+      // `allowCredentials` empty array invokes an account selector by discoverable credentials.
+      options.allowCredentials = [];
+
+      console.log("navigator get:");
+      // Invoke WebAuthn get
+      const cred = await navigator.credentials.get({
+        publicKey: options,
+        // conditionalを指定で登録済みパスキーを表示（こっちだと動作しなかった）
+        // mediation: conditional ? 'conditional' : 'optional' 
+        mediation: 'required' // 明示的に使用するパスキーを指定
+      });
+      console.log("cred:", cred);
+
+      const credential = {};
+      credential.id = cred.id;
+      credential.type = cred.type;
+      // Base64URL encode `rawId`
+      credential.rawId = base64url.encode(cred.rawId);
+
+      // Base64URL encode some values
+      const clientDataJSON = base64url.encode(cred.response.clientDataJSON);
+      const authenticatorData = base64url.encode(cred.response.authenticatorData);
+      const signature = base64url.encode(cred.response.signature);
+      const userHandle = base64url.encode(cred.response.userHandle);
+
+      credential.response = {
+        clientDataJSON,
+        authenticatorData,
+        signature,
+        userHandle,
+      };
+
+      // Send the result to the server and return the promise.
+      const res = await _fetch(`/auth/signinResponse/without/id_token`, {
+        credential: credential
+      });
+
+      // Store random bytes
+      randBytes = res.randBytes;
+      console.log("randBytes:", randBytes);
+      return res.user;
+    };
+
     async function handleRegister() {
       try {
         const idToken = getIdToken();
@@ -292,6 +344,49 @@
       }
     }
 
+    async function handleAfterLoginConfidentialRequest() {
+      try {
+        // WebAuthnで認証
+        const user = await authenticateWithoutIDToken(true);
+        if (!user) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in confidential request failed.';
+          return;
+        }
+
+        if (!randBytes) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in confidential request failed.';
+          return;
+        }
+
+        // get nonce
+        const nonceRes = await _fetch('/nonce');
+        const nonce = nonceRes.nonce;
+
+        console.log("randBytes:", randBytes);
+        console.log("nonce:", nonce);
+
+        // generate hash
+        const hash = await digestMessage(randBytes+nonce);
+        console.log("hash:", hash);
+        const res = await _fetch('/after/signin', {hash: hash});
+
+        if(res.verified) {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in confidential request succeeded.';
+        } else {
+          const content = document.getElementById('content');
+          content.innerHTML = 'After sigin in confidential request failed.';
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+        const content = document.getElementById('content');
+        content.innerHTML = 'After sigin in confidential request failed.';
+      }
+    }
+
     async function handleNormalRegister() {
       try {
         const idToken = getIdToken();
@@ -360,6 +455,7 @@
     document.getElementById('registerButton').addEventListener('click', handleRegister);
     document.getElementById('loginButton').addEventListener('click', handleLogin);
     document.getElementById('afterLoginRequestButton').addEventListener('click', handleAfterLoginRequest);
+    document.getElementById('afterLoginConfidentialRequestButton').addEventListener('click', handleAfterLoginConfidentialRequest);
     document.getElementById('normalRegisterButton').addEventListener('click', handleNormalRegister);
     document.getElementById('normalLoginButton').addEventListener('click', handleNormalLogin);
     document.getElementById('normalAfterLoginRequestButton').addEventListener('click', handleAfterNormalLoginRequest);
