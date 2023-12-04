@@ -60,3 +60,18 @@ docker compose -f docker-compose.evaluation.yml exec victim bash
 docker compose -f docker-compose.evaluation.yml exec attacker bash
 # python3 access_pattern/id_token/attacker_browser.py
 ```
+
+### Access with victim's session_token and secret from victim's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/session_token/secret/victim_browser.py
+```
+
+### Access with victim's session_token and secret from attacker's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/session_token/secret/attacker_browser_pre.py
+
+docker compose -f docker-compose.evaluation.yml exec attacker bash
+# python3 access_pattern/session_token/secret/attacker_browser.py
+```
