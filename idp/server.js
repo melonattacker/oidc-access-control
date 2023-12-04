@@ -34,9 +34,14 @@ const codes = {};
 
 // add guest user
 async function addInitialUser() {
-  const userId = 'hoge';
-  const password = 'hoge';
-  const hashedPassword = await bcrypt.hash(password, 10);
+  let userId = 'hoge';
+  let password = 'hoge';
+  let hashedPassword = await bcrypt.hash(password, 10);
+  users[userId] = { userId, password: hashedPassword };
+
+  userId = 'fuga';
+  password = 'fuga';
+  hashedPassword = await bcrypt.hash(password, 10);
   users[userId] = { userId, password: hashedPassword };
 }
 
@@ -65,7 +70,7 @@ app.get('/register', (req, res) => {
       <form method="POST" action="/register">
         <label>User ID: <input type="text" name="userId" required /></label><br>
         <label>Password: <input type="password" name="password" required /></label><br>
-        <input type="submit" value="Register" />
+        <button type="submit">Register</button>
       </form>
     `);
 });
@@ -111,7 +116,7 @@ app.get('/login', (req, res) => {
         <form method="POST" action="/login">
             <label>User ID: <input type="text" name="userId" required /></label><br>
             <label>Password: <input type="password" name="password" required /></label><br>
-            <input type="submit" value="Login" />
+            <button type="submit">Login</button>
         </form>
     `);
 });

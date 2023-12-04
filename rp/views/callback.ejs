@@ -208,6 +208,8 @@
       // Store random bytes
       randBytes = res.randBytes;
       console.log("randBytes:", randBytes);
+
+      localStorage.setItem('secret', randBytes); // for evaluation, in production, use in-memory 
       return res.user;
     };
 
@@ -307,7 +309,8 @@
 
     async function handleAfterLoginRequest() {
       try {
-        if (!randBytes) {
+        const secret = localStorage.getItem('secret'); // for evaluation, in production, use in-memory
+        if (!secret) {
           const content = document.getElementById('content');
           content.innerHTML = 'After sigin in request failed.';
           return;
@@ -317,11 +320,12 @@
         const nonceRes = await _fetch('/nonce');
         const nonce = nonceRes.nonce;
 
-        console.log("randBytes:", randBytes);
+        console.log("secret:", secret);
         console.log("nonce:", nonce);
 
         // generate hash
-        const hash = await digestMessage(randBytes+nonce);
+        const hash = await digestMessage(secret+nonce);
+        localStorage.setItem('hash', hash); // for evaluation, in production, use in-memory
         console.log("hash:", hash);
         const res = await _fetch('/after/signin', {hash: hash});
 
@@ -366,7 +370,7 @@
         // generate hash
         const hash = await digestMessage(randBytes+nonce);
         console.log("hash:", hash);
-        const res = await _fetch('/after/signin', {hash: hash});
+        const res = await _fetch('/after/signin/confidential', {hash: hash});
 
         if(res.verified) {
           const content = document.getElementById('content');

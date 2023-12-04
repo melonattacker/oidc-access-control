@@ -35,14 +35,14 @@ app.use(session({
 }));
 
 const RP_NAME = 'RP';
-const OP_HOST = process.env.OP_HOST === 'op' ? 'op' : 'localhost';
+const IDP_HOST = process.env.IDP_HOST === 'idp' ? 'idp' : 'localhost';
+const MODE = process.env.MODE || 'dev';
 
 app.use((req, res, next) => {
   process.env.HOSTNAME = req.hostname;
-  const protocol = process.env.NODE_ENV === 'localhost' ? 'http' : 'https';
+  const protocol = 'https';
   process.env.ORIGIN = `${protocol}://${req.headers.host}`;
   process.env.RP_NAME = RP_NAME;
-  req.schema = 'https';
   return next();
 });
 
@@ -77,8 +77,13 @@ app.get('/', (req, res) => {
 // send authentication request to IdP
 app.get('/login', (req, res) => {
   const state = crypto.randomBytes(16).toString('hex');
-  const nonce = crypto.randomBytes(16).toString('hex')
-  const url = new URL(`http://localhost:4445/authorize`);
+  const nonce = crypto.randomBytes(16).toString('hex');
+  let url;
+  if (MODE === 'dev') {
+    url = new URL(`http://localhost:4445/authorize`);
+  } else {
+    url = new URL(`http://${IDP_HOST}:4445/authorize`);
+  }
   url.searchParams.set('response_type', 'id_token');
   url.searchParams.set('client_id', clientID);
   url.searchParams.set('redirect_uri', redirectUri);
@@ -214,19 +219,16 @@ app.post('/auth/registerRequest', async (req, res) => {
 
   // Check if the user already exists.
   let user = await Users.findBySub(token.sub);
-  if (user) {
-      // User already exists.
-      return res.status(400).json({ error: 'User already exists.' });
-  }
-
-  // Create a new user.
-  user = {
+  if (!user) {
+    // Create a new user.
+    user = {
       id: isoBase64URL.fromBuffer(crypto.randomBytes(32)),
       username: token.username,
       sub: token.sub,
       registered: false, // not registered yet
-  };
-  await Users.create(user);
+    };
+    await Users.create(user);
+  }
 
   req.session.username = user.sub;
 
@@ -662,7 +664,7 @@ app.post('/after/signin', async(req, res) => {
 })
 
 // after sign in confidential request
-app.post('/after/signin', async(req, res) => {
+app.post('/after/signin/confidential', async(req, res) => {
   try {
     if (!req.session.username) {
       return res.status(400).json({ error: 'Please sign in.' });
