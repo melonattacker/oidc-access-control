@@ -1,20 +1,14 @@
 version: '3'
 
 services:
-  https-portal:
-    image: steveltn/https-portal:1
-    ports:
-      - '443:443'
-    environment:
-      DOMAINS: 'localhost -> http://rp:4444'
-      STAGE: local
   rp:
     build: ./rp
-    # ports:
-    #   - "4444:4444"
+    ports:
+      - "4444:4444"
     environment:
-      - OP_HOST=op
-      - REDIRECT_URI=https://localhost/callback
+      - IDP_HOST=idp
+      - REDIRECT_URI=https://localhost:4444/callback
+      - MODE=dev
     depends_on:
       - idp
       - mongo-rp
@@ -23,7 +17,7 @@ services:
     ports:
       - "4445:4445"
     environment:
-      - REDIRECT_URI=https://localhost/callback
+      - REDIRECT_URI=https://localhost:4444/callback
   mongo-rp:
     image: mongo
     volumes:
