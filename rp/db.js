@@ -211,7 +211,7 @@ const RandBytes = {
   },
 
   removeBySub: async (sub) => {
-    const result = await RandBytesModel.deteleMany({ sub: sub });
+    const result = await RandBytesModel.deleteMany({ sub: sub });
     return result;
   }
 }
@@ -228,7 +228,7 @@ const Nonce = {
   },
 
   removeBySub: async (sub) => {
-    const result = await NonceModel.deteleMany({ sub: sub });
+    const result = await NonceModel.deleteMany({ sub: sub });
     return result;
   }
 }
@@ -245,7 +245,7 @@ const VerificationToken = {
   },
 
   removeBySub: async (sub) => {
-    const result = await VerificationTokenModel.deteleMany({ sub: sub });
+    const result = await VerificationTokenModel.deleteMany({ sub: sub });
     return result;
   }
 }
