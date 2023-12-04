@@ -273,6 +273,7 @@
 
         // generate hash
         const hash = await digestMessage(secret+nonce);
+        localStorage.setItem('hash', hash); // for evaluation, in production, use in-memory
         console.log("hash:", hash);
         const res = await _fetch('/after/signin', {hash: hash});
 

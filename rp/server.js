@@ -535,6 +535,9 @@ app.post('/after/signin', async(req, res) => {
     console.log("hashResult:", hashResult);
     console.log("sourceResult:", sourceResult);
 
+    // delete nonce
+    await Nonce.removeBySub(req.session.username);
+
     if (hashResult && sourceResult) {
       return res.json({ verified: true });
     }

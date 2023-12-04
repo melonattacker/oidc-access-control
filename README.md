@@ -98,3 +98,35 @@ sign in result (victim):  <p id="content">Sign in succeeded.</p>
 cookies:  [{'name': 'connect.sid', 'value': 's%3AXfrJAZ2cJ_gXzr8JZUbCnX_kdCh_IISu.2lzETWS8%2BRd50J1Y5m8twEewehXJNC65%2BazaOJgC938', 'domain': 'idp', 'path': '/', 'expires': -1, 'httpOnly': True, 'secure': False, 'sameSite': 'Lax'}, {'name': 'connect.sid', 'value': 's%3AfmPIDVycNd-X2l1IVtBSom2CYYrgWkq1.FONwNQeIEcVNR8uJzukjCGiV7SnHBQz3%2BFYL3g%2Fyyp8', 'domain': 'rp', 'path': '/', 'expires': -1, 'httpOnly': False, 'secure': False, 'sameSite': 'Lax'}]
 after sign in result (attacker):  <p id="content">After sigin in request failed.</p>
 ```
+
+### Access with victim's session_token and hash from victim's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/session_token/hash/victim_browser.py
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+after sign in result (victim):  <p id="content">After sigin in request succeeded.</p>
+hash:  7030e9ee35007c07c96a3c3ea6dc4dd637107b5516e496b68f8c098d3f3cbb5d
+after sign in result (attacker):  {'verified': True}
+```
+
+### Access with victim's session_token and hash from attacker's browser
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 access_pattern/session_token/hash/attacker_browser_pre.py
+sign up result (victim):  <p id="content">Sign up succeeded.</p>
+sign in result (victim):  <p id="content">Sign in succeeded.</p>
+session_token:  s%3AiNa0QM8yHooLQabvWWgHNLy2FEgTzQkc.UvufSbkXiLJpkX8rLIJdN%2FJ3aZy%2BEkxNZVuUClaqjVE
+after sign in result (victim):  <p id="content">After sigin in request succeeded.</p>
+hash:  1c7565bd8474cc46476501653ac7ec398335ce4be2609a07088d6db0f7b4a44e
+ok
+
+docker compose -f docker-compose.evaluation.yml exec attacker bash
+# python3 access_pattern/session_token/hash/attacker_browser.py
+session_token:  s%3AiNa0QM8yHooLQabvWWgHNLy2FEgTzQkc.UvufSbkXiLJpkX8rLIJdN%2FJ3aZy%2BEkxNZVuUClaqjVE
+hash:  1c7565bd8474cc46476501653ac7ec398335ce4be2609a07088d6db0f7b4a44e
+sign up result (attacker):  <p id="content">Sign up succeeded.</p>
+sign in result (attacker):  <p id="content">Sign in succeeded.</p>
+cookies:  [{'name': 'connect.sid', 'value': 's%3AmbyT5Kj0pWZw6ZFtwZt5sjilZbe9CVcD.g3M391yC16lLbV0xq%2B5LS97vlMzbxUHeb746Zex%2B8Gk', 'domain': 'idp', 'path': '/', 'expires': -1, 'httpOnly': True, 'secure': False, 'sameSite': 'Lax'}, {'name': 'connect.sid', 'value': 's%3AiNa0QM8yHooLQabvWWgHNLy2FEgTzQkc.UvufSbkXiLJpkX8rLIJdN%2FJ3aZy%2BEkxNZVuUClaqjVE', 'domain': 'rp', 'path': '/', 'expires': -1, 'httpOnly': False, 'secure': False, 'sameSite': 'Lax'}]
+after sign in result (attacker):  {'verified': False}
+```

