@@ -40,6 +40,7 @@ services:
     build: ./evaluation
     volumes:
       - ./evaluation:/app
+      - /tmp/hogehoge:/tmp/hogehoge
     environment:
       - RP_URL=https://rp:4444
       - IDP_URL=http://idp:4445

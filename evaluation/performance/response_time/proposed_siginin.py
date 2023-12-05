@@ -4,10 +4,13 @@ import asyncio
 import random
 import string
 import csv
+import tempfile
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 RP_URL = os.environ.get('RP_URL') or 'http://localhost:4444'
+
+save_to_csv_flag = os.environ.get('SAVE_TO_CSV', 'False').lower() in ['true', '1']
 
 # victim credentials
 victim_username = 'hoge'
@@ -43,13 +46,31 @@ async def sso_flow(page):
 
 async def main():
     async with async_playwright() as p:
+        # Create tmp file
+        temp_file = tempfile.NamedTemporaryFile(prefix="tmp", dir="/tmp/hogehoge", delete=False)
+        print("Temporary file name:", temp_file.name)
+
         browser = await p.chromium.launch()
         context = await browser.new_context(ignore_https_errors=True)
         page = await context.new_page()
 
+        # Install virtual authenticator
+        cdpSession = await context.new_cdp_session(page)
+        await cdpSession.send('WebAuthn.enable')
+        await cdpSession.send('WebAuthn.addVirtualAuthenticator', {
+            'options': {
+                'protocol': 'ctap2',
+                'transport': 'internal',
+                'automaticPresenceSimulation': True,
+                'hasResidentKey': True,
+                'hasUserVerification': True,
+                'isUserVerified': True,
+            }
+        })
+
         # Sign up(victim, victim's browser)
         page = await sso_flow(page)
-        await page.click('#normalRegisterButton')
+        await page.click('#registerButton')
         time.sleep(3) # wait 3 seconds
 
         content = await page.content()
@@ -60,14 +81,13 @@ async def main():
 
         # store response times
         response_times_sign_in = []
-        response_times_after_sign_in = []
 
         # Sign in(victim, victim's browser)
         for i in range(100):
             start_time = time.time() # start time
 
             page = await sso_flow(page)
-            await page.click('#normalLoginButton')
+            await page.click('#loginButton')
             await page.wait_for_selector('p#content:text("Sign in succeeded.")')
 
             end_time = time.time()  # End time
@@ -77,31 +97,18 @@ async def main():
 
             time.sleep(0.5)
 
-        # After sigin in(victim, victim's browser)
-        for i in range(100):
-            start_time = time.time() # start time
-
-            await page.click('#normalAfterLoginRequestButton')
-            await page.wait_for_selector('p#content:text("After sigin in request succeeded.")')
-
-            end_time = time.time()  # End time
-            response_time = end_time - start_time  # Calculate the difference
-            response_times_after_sign_in.append(response_time)
-            print(f"Response time for after sign in {i}: {response_time:.2f} seconds")
-
-            time.sleep(0.5)
-        
         # show average response time
         average_response_time_sign_in = sum(response_times_sign_in) / len(response_times_sign_in)
-        average_response_time_after_sign_in = sum(response_times_after_sign_in) / len(response_times_after_sign_in)
         print(f"Average response time for sign in: {average_response_time_sign_in:.2f} seconds")
-        print(f"Average response time for after sign in: {average_response_time_after_sign_in:.2f} seconds")
 
         # save response times to csv
-        save_to_csv(response_times_sign_in, filename="./data/performance/baseline/response_times_sign_in.csv")
-        save_to_csv(response_times_after_sign_in, filename="./data/performance/baseline/response_times_after_sign_in.csv")
+        if save_to_csv_flag:
+            save_to_csv(response_times_sign_in, "./data/performance/response_time/proposed/response_times_signin.csv")
        
         await browser.close()
+
+        temp_file.close()
+        os.unlink(temp_file.name)
 
 if __name__ == "__main__":
     asyncio.run(main())
