@@ -3,6 +3,7 @@ version: '3'
 services:
   rp:
     build: ./rp
+    container_name: rp
     ports:
       - "4444:4444"
     environment:
@@ -14,18 +15,21 @@ services:
       - mongo-rp
   idp:
     build: ./idp
+    container_name: idp
     ports:
       - "4445:4445"
     environment:
       - REDIRECT_URI=https://rp:4444/callback
   mongo-rp:
     image: mongo
+    container_name: mongo-rp
     volumes:
       - mongo-data-rp:/data/db
       - ./mongo/init.js:/docker-entrypoint-initdb.d/init.js
   attacker:
     tty: true
     build: ./evaluation
+    container_name: attacker
     ports:
       - 6666:6666
     volumes:
@@ -38,6 +42,7 @@ services:
   victim:
     tty: true
     build: ./evaluation
+    container_name: victim
     volumes:
       - ./evaluation:/app
       - /tmp/hogehoge:/tmp/hogehoge

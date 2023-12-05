@@ -29,7 +29,7 @@ counter=1
 
 while [ -f "$temp_file" ]; do
     # Run the docker stats command non-interactively and capture the output once
-    stats=$(docker stats --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}")
+    stats=$(docker stats --no-stream --format "table {{.CPUPerc}}\t{{.MemUsage}}" rp)
 
     # Sum up the CPU and memory usage
     cpu_total=$(echo "$stats" | awk 'NR>1 {gsub(/%/,""); total += $1} END {print total}')

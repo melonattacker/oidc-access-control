@@ -95,7 +95,7 @@ async def main():
             response_times_sign_in.append(response_time)
             print(f"Response time for sign in {i}: {response_time:.2f} seconds")
 
-            time.sleep(0.5)
+            time.sleep(1)
 
         # show average response time
         average_response_time_sign_in = sum(response_times_sign_in) / len(response_times_sign_in)
