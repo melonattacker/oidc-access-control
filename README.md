@@ -184,3 +184,22 @@ bash ./evaluation/performance/resource/baseline_after_signin.sh
 docker compose -f docker-compose.evaluation.yml exec victim bash
 # SAVE_TO_CSV=false python3 performance/response_time/baseline_after_siginin.py
 ```
+
+##### proposed method
+```
+// Execute on host machine
+bash ./evaluation/performance/resource/proposed_signin.sh
+
+// Execute same time with above script
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# SAVE_TO_CSV=false python3 performance/response_time/proposed_siginin.py
+```
+
+```
+// Execute on host machine
+bash ./evaluation/performance/resource/proposed_after_signin.sh
+
+// Execute same time with above script
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# SAVE_TO_CSV=false python3 performance/response_time/proposed_after_siginin.py
+```
