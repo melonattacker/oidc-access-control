@@ -153,15 +153,16 @@ after sign in result (attacker):  {'verified': False}
 ##### baseline
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
-# SAVE_TO_CSV=true python3 performance/response_time/baseline_siginin.py
-# SAVE_TO_CSV=true python3 performance/response_time/baseline_after_siginin.py
+# SAVE_TO_CSV=true python3 performance/response_time/baseline_signin.py
+# SAVE_TO_CSV=true python3 performance/response_time/baseline_after_signin.py
 ```
 
 ##### proposed method
 ```
 docker compose -f docker-compose.evaluation.yml exec victim bash
-# SAVE_TO_CSV=true python3 performance/response_time/proposed_siginin.py
-# SAVE_TO_CSV=true python3 performance/response_time/proposed_after_siginin.py
+# SAVE_TO_CSV=true python3 performance/response_time/proposed_signin.py
+# SAVE_TO_CSV=true python3 performance/response_time/proposed_after_signin.py
+# SAVE_TO_CSV=true python3 performance/response_time/proposed_after_signin_confidential.py
 ```
 
 #### Resource
@@ -173,7 +174,7 @@ bash ./evaluation/performance/resource/baseline_signin.sh
 
 // Execute same time with above script
 docker compose -f docker-compose.evaluation.yml exec victim bash
-# SAVE_TO_CSV=false python3 performance/response_time/baseline_siginin.py
+# SAVE_TO_CSV=false python3 performance/response_time/baseline_signin.py
 ```
 
 ```
@@ -182,7 +183,7 @@ bash ./evaluation/performance/resource/baseline_after_signin.sh
 
 // Execute same time with above script
 docker compose -f docker-compose.evaluation.yml exec victim bash
-# SAVE_TO_CSV=false python3 performance/response_time/baseline_after_siginin.py
+# SAVE_TO_CSV=false python3 performance/response_time/baseline_after_signin.py
 ```
 
 ##### proposed method
@@ -192,7 +193,7 @@ bash ./evaluation/performance/resource/proposed_signin.sh
 
 // Execute same time with above script
 docker compose -f docker-compose.evaluation.yml exec victim bash
-# SAVE_TO_CSV=false python3 performance/response_time/proposed_siginin.py
+# SAVE_TO_CSV=false python3 performance/response_time/proposed_signin.py
 ```
 
 ```
@@ -201,5 +202,14 @@ bash ./evaluation/performance/resource/proposed_after_signin.sh
 
 // Execute same time with above script
 docker compose -f docker-compose.evaluation.yml exec victim bash
-# SAVE_TO_CSV=false python3 performance/response_time/proposed_after_siginin.py
+# SAVE_TO_CSV=false python3 performance/response_time/proposed_after_signin.py
+```
+
+```
+// Execute on host machine
+bash ./evaluation/performance/resource/proposed_after_signin_confidential.sh
+
+// Execute same time with above script
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# SAVE_TO_CSV=false python3 performance/response_time/proposed_after_signin_confidential.py
 ```
