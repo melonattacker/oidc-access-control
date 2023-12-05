@@ -145,3 +145,19 @@ sign in result (attacker):  <p id="content">Sign in succeeded.</p>
 cookies:  [{'name': 'connect.sid', 'value': 's%3AmbyT5Kj0pWZw6ZFtwZt5sjilZbe9CVcD.g3M391yC16lLbV0xq%2B5LS97vlMzbxUHeb746Zex%2B8Gk', 'domain': 'idp', 'path': '/', 'expires': -1, 'httpOnly': True, 'secure': False, 'sameSite': 'Lax'}, {'name': 'connect.sid', 'value': 's%3AiNa0QM8yHooLQabvWWgHNLy2FEgTzQkc.UvufSbkXiLJpkX8rLIJdN%2FJ3aZy%2BEkxNZVuUClaqjVE', 'domain': 'rp', 'path': '/', 'expires': -1, 'httpOnly': False, 'secure': False, 'sameSite': 'Lax'}]
 after sign in result (attacker):  {'verified': False}
 ```
+
+### Performance
+
+#### Reponse Time
+
+##### baseline
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 performance/response_time/baseline.py
+```
+
+##### proposed method
+```
+docker compose -f docker-compose.evaluation.yml exec victim bash
+# python3 performance/response_time/proposed_method.py
+```
