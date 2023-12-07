@@ -677,6 +677,8 @@ app.post('/after/signin/confidential', async(req, res) => {
     if (!req.session.is_fido_done) {
       return res.status(400).json({ error: 'Please sign in with FIDO first.' });
     }
+
+    req.session.is_fido_done = false
     
     const hash = req.body.hash;
 
