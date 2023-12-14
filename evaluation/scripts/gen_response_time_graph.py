@@ -34,11 +34,16 @@ mean_proposed_after_signin_confidential, std_proposed_after_signin_confidential 
 labels = ['導入前\n（認証時）', '導入後\n（認証時）', '導入前\n（認証後）', '導入後\n（認証後）', '導入後\n（認証後,機密）']
 values = [mean_baseline_signin*1000, mean_proposed_signin*1000, mean_baseline_after_signin*1000, mean_proposed_after_signin*1000, mean_proposed_after_signin_confidential*1000]
 std_devs = [std_baseline_signin*1000, std_proposed_signin*1000, std_baseline_after_signin*1000, std_proposed_after_signin*1000, std_proposed_after_signin_confidential*1000]
-colors = ['lightgray', 'grey', 'lightgray', 'grey', 'grey']
+colors = ['gainsboro', 'darkgray', 'lightgray', 'grey', 'dimgray']
+
+legend_labels = ['提案手法導入前の認証時リクエスト', '提案手法導入後の認証時リクエスト', '提案手法導入前の認証後リクエスト', '提案手法導入後の認証後リクエスト', '提案手法導入後の認証後機密リクエスト']
 
 plt.tick_params(labelsize=12)
 bars = plt.bar(labels, values, color=colors, yerr=std_devs, capsize=5)
+for bar, legend_label in zip(bars, legend_labels):
+    bar.set_label(legend_label)
 plt.ylabel('応答時間 [ms]', fontsize=14)
+plt.legend()
 
 # グラフをファイルとして保存
 output_filename = "./evaluation/graph/response_times_comparison.png"
