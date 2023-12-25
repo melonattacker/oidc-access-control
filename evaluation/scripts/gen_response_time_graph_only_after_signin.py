@@ -26,6 +26,9 @@ mean_baseline_after_signin, std_baseline_after_signin = calc_response_time_stats
 mean_proposed_after_signin, std_proposed_after_signin = calc_response_time_stats(proposed_after_signin_csv)
 mean_proposed_after_signin_confidential, std_proposed_after_signin_confidential = calc_response_time_stats(proposed_after_signin_confidential_csv)
 
+# グラフのサイズを指定
+plt.figure(figsize=(6, 4))
+
 # グラフを描画
 labels = ['導入前\n（認証後）', '導入後\n（認証後）', '導入後\n（認証後,機密）']
 values = [mean_baseline_after_signin*1000, mean_proposed_after_signin*1000, mean_proposed_after_signin_confidential*1000]
@@ -39,7 +42,7 @@ bars = plt.bar(labels, values, color=colors, yerr=std_devs, capsize=5)
 for bar, legend_label in zip(bars, legend_labels):
     bar.set_label(legend_label)
 plt.ylabel('応答時間 [ms]', fontsize=14)
-plt.legend()
+plt.legend(fontsize=14)
 
 # グラフをファイルとして保存
 output_filename = "./evaluation/graph/response_times_comparison_only_after_signin.png"

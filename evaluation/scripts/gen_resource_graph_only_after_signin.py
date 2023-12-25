@@ -17,7 +17,7 @@ def plot_and_save_graph(labels, values, errors, y_label, filename, legend_labels
     for bar, legend_label in zip(bars, legend_labels):
         bar.set_label(legend_label)
     plt.ylabel(y_label, fontsize=14)
-    plt.legend()
+    plt.legend(fontsize=14)
     plt.savefig(filename, format="png", dpi=300)
     plt.clf()
 
@@ -40,6 +40,9 @@ for csv_file in [baseline_after_signin_csv, proposed_after_signin_csv, proposed_
     cpu_errors.append(std_cpu)
     mem_values.append(avg_mem)
     mem_errors.append(std_mem)
+
+# グラフのサイズを指定
+plt.figure(figsize=(6, 4))
 
 legend_labels = ['提案手法導入前の認証後リクエスト', '提案手法導入後の認証後リクエスト', '提案手法導入後の認証後機密リクエスト']
 
