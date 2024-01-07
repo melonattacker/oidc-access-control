@@ -12,12 +12,12 @@ def calc_avg_and_std(filename, key):
     return statistics.mean(values), statistics.stdev(values)
 
 def plot_and_save_graph(labels, values, errors, y_label, filename, legend_labels):
-    plt.tick_params(labelsize=12)
+    plt.tick_params(labelsize=10)
     bars = plt.bar(labels, values, color=['gainsboro', 'darkgray', 'lightgray', 'grey', 'dimgray'], yerr=errors, capsize=5)
     for bar, legend_label in zip(bars, legend_labels):
         bar.set_label(legend_label)
     plt.ylabel(y_label, fontsize=14)
-    plt.legend()
+    plt.legend(fontsize=12)
     plt.savefig(filename, format="png", dpi=300)
     plt.clf()
 
@@ -29,7 +29,7 @@ proposed_after_signin_csv = "./evaluation/data/performance/resource/proposed/res
 proposed_after_signin_confidential_csv = "./evaluation/data/performance/resource/proposed/resource_after_signin_confidential.csv"
 
 # CSVファイルからデータを計算
-labels = ['Before 1', 'After 1', 'Before 2', 'After 2', 'After 3']
+labels = ['Without\n(Auth)', 'With\n(Auth)', 'Without\n(Post-Auth)', 'With\n(Post-Auth)', 'With\n(Post-Auth,\nConfidential)']
 cpu_values = []
 cpu_errors = []
 mem_values = []
@@ -43,7 +43,7 @@ for csv_file in [baseline_signin_csv, proposed_signin_csv, baseline_after_signin
     mem_values.append(avg_mem)
     mem_errors.append(std_mem)
 
-legend_labels = ['Login request before installing the method', 'Login request after installing the method', 'After login request before installing the method', 'After login request after installing the method', 'After login confidential request after installing the method']
+legend_labels = ['Auth request without the method', 'Auth request with the method', 'Post auth request without the method', 'Post auth request with the method', 'Post auth confidential request with the method']
 
 # CPU使用率のグラフを描画 & 保存
 plot_and_save_graph(labels, cpu_values, cpu_errors, 'CPU Usage [%]', './evaluation/graph/cpu_usage_comparison_en.png', legend_labels)
