@@ -19,12 +19,13 @@ def calc_avg_and_std(filename, key):
     return statistics.mean(filtered_values), statistics.stdev(filtered_values)
 
 def plot_and_save_graph(labels, values, errors, y_label, filename, legend_labels):
-    plt.tick_params(labelsize=10)
+    plt.tick_params(labelsize=14)
     bars = plt.bar(labels, values, color=['gainsboro', 'darkgray', 'lightgray', 'grey', 'dimgray'], yerr=errors, capsize=5)
     for bar, legend_label in zip(bars, legend_labels):
         bar.set_label(legend_label)
     plt.ylabel(y_label, fontsize=14)
-    plt.legend(fontsize=12)
+    plt.legend(fontsize=14)
+    plt.subplots_adjust(left=0.1, right=0.95, bottom=0.15, top=0.98) # 余白の調整
     plt.savefig(filename, format="png", dpi=300)
     plt.clf()
 

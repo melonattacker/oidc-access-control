@@ -38,15 +38,16 @@ colors = ['gainsboro', 'darkgray', 'lightgray', 'grey', 'dimgray']
 
 legend_labels = ['Auth request without the method', 'Auth request with the method', 'Post auth request without the method', 'Post auth request with the method', 'Post auth confidential request with the method']
 
-plt.tick_params(labelsize=10)
+plt.tick_params(labelsize=14)
 bars = plt.bar(labels, values, color=colors, yerr=std_devs, capsize=5)
 for bar, legend_label in zip(bars, legend_labels):
     bar.set_label(legend_label)
 plt.ylabel('Response time [ms]', fontsize=14)
-plt.legend(fontsize=12)
+plt.legend(fontsize=14)
 
 # グラフをファイルとして保存
 output_filename = "./evaluation/graph/response_times_comparison_en.png"
+plt.subplots_adjust(left=0.12, right=0.95, bottom=0.15, top=0.95) # 余白の調整
 plt.savefig(output_filename, format="png", dpi=300)
 print(f"Graph saved to {output_filename}")
 
